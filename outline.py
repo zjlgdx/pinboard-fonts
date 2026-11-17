@@ -125,13 +125,24 @@ def main():
                 pen = CompactPen()
                 rec.replay(TransformPen(pen, (1, 0, 0, 1, dx, 0)))
                 d[ch] = pen.d()
-            kern = {}
+            kern, exact = {}, {}
             if 'GPOS' in font:
+                names = {cmap[ord(c)]: c for c in chars if c != ' '}
                 for lk in font['GPOS'].table.LookupList.Lookup:
                     for st in lk.SubTable:
+                        if getattr(st, 'Format', None) == 1:
+                            # Glyph pairs (an accent under a T) come first in the
+                            # lookup, so they win over the class pairs below.
+                            for g1, ps in zip(st.Coverage.glyphs, st.PairSet):
+                                if g1 not in names:
+                                    continue
+                                for r in ps.PairValueRecord:
+                                    if r.SecondGlyph in names:
+                                        v = r.Value1.XAdvance if r.Value1 else 0
+                                        exact[names[g1] + names[r.SecondGlyph]] = round((v or 0) / GRID, 1)
+                            continue
                         if getattr(st, 'Format', None) != 2:
                             continue
-                        names = {cmap[ord(c)]: c for c in chars if c != ' '}
                         for g1, c1 in st.ClassDef1.classDefs.items():
                             if g1 not in names:
                                 continue
@@ -141,6 +152,8 @@ def main():
                                 v = st.Class1Record[c1].Class2Record[c2].Value1
                                 if v is not None and v.XAdvance:
                                     kern[names[g1] + names[g2]] = round(v.XAdvance / GRID, 1)
+            kern.update(exact)
+            kern = {k: v for k, v in kern.items() if v}
             size = sum(len(v) for v in d.values())
             total += size
             print(f'{cls}: {len(d)} glyphs, {size} chars of paths, {len(kern)} kerning pairs', file=sys.stderr)

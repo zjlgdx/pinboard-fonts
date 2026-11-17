@@ -74,13 +74,14 @@ from fontTools.ttLib import TTFont
 
 import cells
 import cffsubr
-from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_anchors, base_of, charset,
-                      mark_anchors, parts)
+import hanzi
+from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_anchors, base_of, cells as wide_cells,
+                      charset, mark_anchors, parts)
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.431         # head.fontRevision; nameID 5 says the same
+VERSION = 0.440         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -266,6 +267,21 @@ def round_pen(draw, strokes, radius, taper=0.0, dot=1.25, flat=0.93):
             draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), fill=255)
 
 
+def stroke_pen(draw, strokes, radius, nib=(1.0, 0.93), cut='kai'):
+    """The round pen along Chinese strokes: its radius follows each stroke's
+    kind (hanzi.profile), heavier where it lands, lighter where it lifts.
+    `nib` is its reach across and down against the radius."""
+    for (pts, closed, length, weight), kind in strokes:
+        if closed == 'fill':
+            fill(draw, pts)
+        for x, y, t in pts:
+            f = 1.25 if length < 30 else (1.0 if closed else hanzi.profile(kind, t, cut))
+            r = radius * weight * f * S
+            rx, ry = r * nib[0], r * nib[1]
+            cx, cy = px(x, y)
+            draw.ellipse((cx - rx, cy - ry, cx + rx, cy + ry), fill=255)
+
+
 def nib_pen(draw, strokes, half_w, half_t, angle):
     a = math.radians(angle)
     u = (math.cos(a), -math.sin(a))     # along the nib edge
@@ -329,8 +345,28 @@ class Style:
         return {}, base_anchors(ch, self.reach, self.ring, self.hook)
 
     def draw(self, ch, img, variant=0):
+        if ch in hanzi.C:
+            return self.draw_hanzi(ch, img, variant)
         warp, _rng = self.warp(ch, variant)
         self.pen(ImageDraw.Draw(img), self.strokes(ch, 1.0, warp, variant))
+        return img
+
+    def draw_hanzi(self, ch, img, variant=0):
+        """Chinese in this family's cut (hanzi.CUTS): the family's own pen,
+        or its own nib, along the character's strokes. Variant 1 is the
+        form mainland China sets (hanzi.ZHS)."""
+        cut = hanzi.CUTS[self.key]
+        strokes, warp, rng = hanzi.placed(ch, self.key, cut['em'] / K, K, seed_for(self.key, ch), zhs=variant == 1)
+        pen = cut['pen'][1 if self.bold else 0]
+        draw = ImageDraw.Draw(img)
+        if cut['nib'] is None:
+            # A broad nib makes its own thick and thin; dots are its short dabs.
+            self.pen(draw, [st for _kind, d in strokes for st in prepare('', self.ink_dots(d), 2.0, warp, pen)])
+        else:
+            stroke_pen(draw, [(st, kind) for kind, d in strokes for st in prepare('', d, 2.0, warp)],
+                       self.radius * pen, cut['nib'], cut['cut'])
+        for _ in range(cut['inked']):
+            img = self.ink(img, rng)
         return img
 
     def ink_dots(self, d):
@@ -347,6 +383,7 @@ class Style:
 
 class Ballpoint(Style):
     family = 'Pinboard Ballpoint'
+    key = 'ballpoint'
     alternates = 2
     # Degrees of lean, part of the handwriting as in other script fonts: the
     # font stays a Regular with post.italicAngle 0, but is spaced upright.
@@ -390,6 +427,7 @@ class Ballpoint(Style):
 
 class Marker(Style):
     family = 'Pinboard Marker'
+    key = 'marker'
     alternates = 2
     lean = 0
     space = 270
@@ -446,6 +484,7 @@ SERIF = re.compile(r'M(-?[\d.]+) (-?[\d.]+) L(-?[\d.]+) (-?[\d.]+)')
 
 class Typewriter(Style):
     family = 'Pinboard Typewriter'
+    key = 'typewriter'
     mono = True
     alternates = 0
     lean = 0
@@ -491,7 +530,8 @@ class Typewriter(Style):
         lo = min(p[0] for p in raw)
         hi = max(p[0] for p in raw)
         mid = (lo + hi) / 2
-        room = self.advance / K - 160 - 2 * (self.radius - 36)   # the cell, less the pen and a gap
+        # The cell (two for a Wide character), less the pen and a gap.
+        room = wide_cells(ch) * self.advance / K - 160 - 2 * (self.radius - 36)
         if ch in KEEP_SHAPE:
             # Symbols keep their proportions: shrink both ways if too wide.
             sq = sy = min(1.0, room / max(hi - lo, 1))
@@ -513,6 +553,8 @@ class Typewriter(Style):
         return warp, rng
 
     def draw(self, ch, img, variant=0):
+        if ch in hanzi.C:
+            return self.draw_hanzi(ch, img, variant)
         warp, rng = self.warp(ch, variant)
         strokes = []
         for role, d, w in self.parts(ch, variant):
@@ -776,6 +818,8 @@ def glyph_name(ch):
 def suffix(ch, variant):
     if not variant:
         return ''
+    if ch in hanzi.ZHS:
+        return '.zhs'
     return '.case' if ch in COMBINING_MARKS else f'.alt{variant}'
 
 
@@ -898,8 +942,15 @@ def features(style, glyphs, pairs, anchors):
     text. An accented letter kerns in its base letter's class; where its
     accent changes the answer (an accent under a T's bar), a glyph pair says
     so first. Alternates and kerning look through combining marks."""
-    fea = ['languagesystem DFLT dflt;', 'languagesystem latn dflt;']
+    fea = ['languagesystem DFLT dflt;', 'languagesystem latn dflt;',
+           'languagesystem hani dflt;', 'languagesystem hani ZHS;']
     fea += mark_features(glyphs, anchors)
+    zhs = sorted(n for n in glyphs if n.endswith('.zhs'))
+    if zhs:
+        # Simplified Chinese text sets its punctuation as mainland China does.
+        fea += ['feature locl {', '  script hani;', '  language ZHS exclude_dflt;']
+        fea += [f'  sub {n[:-4]} by {n};' for n in zhs]
+        fea += ['} locl;']
     if style.alternates:
         lower = [g['ch'] for g in glyphs.values() if g['variant'] == 0 and kind(g['ch']) == 'lower'
                  and f'{glyph_name(g["ch"])}.alt1' in glyphs]
@@ -954,12 +1005,18 @@ def make(style, shared=None):
     by_char = {}         # char -> its default glyph's entry
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
-        for ch in charset(style.mono):
+        for ch in charset(style.mono) + list(hanzi.C):
             variants = style.alternates if kind(ch) == 'lower' else 0
             if ch in COMBINING_MARKS and ANCHOR[COMBINING_MARKS[ch]] == 'top':
                 variants = 1        # the capital form, `.case`
+            if ch in hanzi.ZHS:
+                variants = 1        # as mainland China sets it, `.zhs`
             for v in range(variants + 1):
-                img = Image.new('L', (int(W * S), int(H * S)), 0)
+                # A Wide character's canvas runs a cell further right.
+                wide = (wide_cells(ch) - 1) * style.advance / K if style.mono else 0
+                if ch in hanzi.C:
+                    wide = max(wide, hanzi.CUTS[style.key]['em'] / K + 100 - (X0 + W))
+                img = Image.new('L', (int((W + wide) * S), int(H * S)), 0)
                 img = style.draw(ch, img, v)
                 edge = np.asarray(img)
                 if edge[:2].any() or edge[-2:].any() or edge[:, :2].any() or edge[:, -2:].any():
@@ -1003,8 +1060,9 @@ def make(style, shared=None):
     if style.mono:
         for g in glyphs.values():
             xmin, _, xmax, _ = bounds(g['rec'])
-            g['adv'] = style.advance
-            g['dx'] = (style.advance - (xmax - xmin)) / 2 - xmin
+            g['adv'] = style.advance * wide_cells(g['ch'])
+            # Chinese is placed by its grid, not its ink: 「 hugs the text after it.
+            g['dx'] = 0 if g['ch'] in hanzi.C else (g['adv'] - (xmax - xmin)) / 2 - xmin
     else:
         # The profiles' rows are the bitmap's, from before the lift, and so
         # are the heights spacing reads, which keeps every advance as it was.
@@ -1012,6 +1070,10 @@ def make(style, shared=None):
         depth = 0.15 * xh
         for g in glyphs.values():
             ch = g['ch']
+            if ch in hanzi.C:
+                # Chinese is set on its em, placed by its grid, not its ink.
+                g['adv'], g['dx'] = hanzi.CUTS[style.key]['em'], 0
+                continue
             zone = zone_for(ch, g['left'], xh, caps)
             target = style.lower_side if kind(ch) in ('lower', 'other') else style.upper_side
             wl, xl = side_white(g['left'], zone, depth, -1)
@@ -1059,7 +1121,7 @@ def make(style, shared=None):
     anchors = {}
     for name, g in glyphs.items():
         ch, v = g['ch'], g['variant']
-        if not (ch in COMBINING_MARKS or ch == '◌' or unicodedata.category(ch).startswith('L')):
+        if ch in hanzi.C or not (ch in COMBINING_MARKS or ch == '◌' or unicodedata.category(ch).startswith('L')):
             continue
         warp, _rng = style.warp(ch, v)
         def font_pt(p, g=g, warp=warp):
@@ -1078,7 +1140,7 @@ def make(style, shared=None):
 
     pairs = {}
     if not style.mono:
-        chars = {g['ch']: g for g in glyphs.values() if g['variant'] == 0}
+        chars = {g['ch']: g for g in glyphs.values() if g['variant'] == 0 and g['ch'] not in hanzi.C}
         pairs = kerning(chars)
 
     # ---- outlines
@@ -1159,6 +1221,10 @@ def make(style, shared=None):
     os2.recalcUnicodeRanges(font)
     os2.recalcCodePageRanges(font)
     os2.recalcAvgCharWidth(font)
+    if style.mono:
+        # Terminals size their cell by the average width: keep it one cell,
+        # though Chinese takes two.
+        os2.xAvgCharWidth = style.advance
 
     addOpenTypeFeaturesFromString(font, features(style, glyphs, pairs, anchors))
     from fontTools.otlLib.maxContextCalc import maxCtxFont
@@ -1174,7 +1240,11 @@ def autohint(font):
     their edges are the cell's, and must not move to the pixel grid on
     their own or rows would stop joining."""
     cmap = font.getBestCmap()
-    cell = sorted({cmap[cp] for cp in cmap if 0x2500 <= cp < 0x25A0 or cp == 0x23BF})
+    cell = sorted({cmap[cp] for cp in cmap if 0x2500 <= cp < 0x25A0 or cp == 0x23BF or 0xE0B0 <= cp <= 0xE0B3})
+    # Chinese has its own lines, not the Latin's blue zones: leave it unhinted
+    # rather than snap its strokes to the x-height and cap height.
+    cell += sorted({cmap[cp] for cp in cmap if chr(cp) in hanzi.C})
+    cell += sorted(n for n in font.getGlyphOrder() if n.endswith('.zhs'))
     with tempfile.TemporaryDirectory() as t:
         src, dst = Path(t) / 'in.otf', Path(t) / 'out.otf'
         font.save(src)

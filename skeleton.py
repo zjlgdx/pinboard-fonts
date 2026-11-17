@@ -529,6 +529,29 @@ TERMINAL = {
     '⌥': 'M50 300 L210 300 L390 640 L550 640 M350 300 L550 300',
     '⌘': ' '.join(circle(x, y, 62) for x, y in ((158, 318), (442, 318), (158, 602), (442, 602)))
          + ' M220 318 L220 602 M380 318 L380 602 M158 380 L442 380 M158 540 L442 540',
+    # More of what Claude Code prints: stars, a copy mark, sort and escape keys.
+    '∗': 'M300 330 L300 590 M187 395 L413 525 M413 395 L187 525',
+    '★': star(300, 470, 5, 260, 105),
+    '☆': star(300, 470, 5, 260, 105, end='Z'),
+    '✦': star(300, 460, 4, 270, 75),
+    '✧': star(300, 460, 4, 270, 115, end='Z'),
+    '⧉': 'M110 230 L390 230 L390 510 L110 510 Z M210 410 L490 410 L490 690 L210 690 Z',
+    '⇅': 'M190 720 L190 200 M100 290 L190 200 L280 290 M410 200 L410 720 M320 630 L410 720 L500 630',
+    '↯': 'M380 160 L220 450 L390 450 L250 740 M250 740 L250 610 M250 740 L355 665',
+    '⎋': 'M300 210 C430 210 540 320 540 460 C540 600 430 710 300 710 C170 710 60 600 60 460 '
+         'M290 470 L110 290 M110 290 L230 290 M110 290 L110 410',
+    '⋯': 'M120 456 l2 8 M298 456 l2 8 M476 456 l2 8',
+    '※': 'M165 325 L435 595 M435 325 L165 595 M298 235 l2 8 M298 680 l2 8 M80 456 l2 8 M516 456 l2 8',
+    '➜': 'M80 460 L500 460 M320 280 L510 460 L320 640',
+    '⌫': 'M40 460 L190 250 L560 250 L560 670 L190 670 Z M290 360 L450 560 M450 360 L290 560',
+    # A Wide character: two cells, as terminals give it.
+    '⚡': 'M400 120 L170 500 L310 500 L230 820 L470 400 L330 400 L400 120 F',
+    # Powerline's own marks: a branch, a line number, a padlock.
+    '': circle(200, 215, 55) + ' ' + circle(200, 705, 55) + ' ' + circle(420, 300, 55)
+              + ' M200 270 L200 650 M420 355 C420 470 200 480 200 600',
+    '': 'M120 160 L120 420 L300 420 M330 500 L330 760 M330 500 L500 760 L500 500',
+    '': 'M130 420 L470 420 L470 730 L130 730 Z M195 420 L195 320 C195 180 405 180 405 320 L405 420 '
+              'M298 555 l2 8',
     # Claude Code's spinner, from small to full: · ✢ ✳ ✶ ✻ ✽
     '✢': leaves(300, 460, 4, 230, 50, hub=0.28),
     '✳': 'M300 230 L300 690 M70 460 L530 460 M137 297 L463 623 M463 297 L137 623',
@@ -541,7 +564,8 @@ TERMINAL = {
 TERMINAL = {c: scale(d, 1.2, 300, 460) for c, d in TERMINAL.items()}
 
 # Pen weight for the heavy forms.
-LIGHTER.update({'❯': 1.55, '✔': 1.6, '✘': 1.6, '⏸': 1.5, '✢': 0.75, '✳': 0.85, '✶': 0.75, '✻': 0.7, '✽': 0.75})
+LIGHTER.update({'❯': 1.55, '✔': 1.6, '✘': 1.6, '⏸': 1.5, '✢': 0.75, '✳': 0.85, '✶': 0.75, '✻': 0.7, '✽': 0.75,
+                '➜': 1.5, '∗': 0.9, '⧉': 0.85, '⇅': 0.9, '': 0.9, '': 0.9, '': 0.9})
 
 # The Typewriter's own forms of symbols that, drawn as in the proportional
 # fonts, came out small in a terminal cell. Arrows run nearly the cell's
@@ -567,6 +591,12 @@ MONO_WEIGHT = {c: 1.2 for c in '←→↑↓↔↕✓✗'}
 
 # Glyphs whose shape must not be stretched to fill the typewriter's cell.
 KEEP_SHAPE = set(SYMBOLS) | set(TERMINAL) | set('©®¤°•◌') | set(COMBINING_MARKS)
+
+
+def cells(ch):
+    """How many terminal cells a character takes: two for East Asian Wide and
+    Fullwidth (Unicode's East Asian Width W and F), else one."""
+    return 2 if _ud.east_asian_width(ch) in ('W', 'F') else 1
 
 
 def charset(mono=False):

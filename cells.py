@@ -372,4 +372,34 @@ def glyphs(adv, asc, desc, light):
         out[chr(cp)] = cell.block(unicodedata.name(chr(cp)))
     # Claude Code's result marker: a light corner that joins the line above.
     out['⎿'] = cell.box({'UP': 'L', 'RIGHT': 'L'})
+    out.update(powerline(adv, asc, desc, light))
     return out
+
+
+def powerline(adv, asc, desc, light):
+    """Powerline's separators (U+E0B0-E0B3): solid and outline arrowheads
+    from the bottom of the line to its top, one cell wide, so a prompt's
+    coloured segments meet edge to edge."""
+    mid = (asc + desc) / 2
+    solid = Poly([(0, desc), (adv, mid), (0, asc)])
+
+    def chevron():
+        # The outline: two strips of the light line's weight along the edges
+        # the solid one has, meeting in a point at the cell's right side.
+        t = light / 2
+        k = math.hypot(adv, mid - desc) / adv      # vertical half-width of a slanted strip
+        return [Poly([(0, desc - t * k), (adv, mid - t * k), (adv, mid + t * k), (0, desc + t * k)]),
+                Poly([(0, asc - t * k), (adv, mid - t * k), (adv, mid + t * k), (0, asc + t * k)])]
+
+    def flipped(polys):
+        return [Poly([(adv - x, y) for x, y in reversed(p.pts)]) for p in polys]
+
+    return {'\ue0b0': union([solid]), '\ue0b1': clipped(chevron(), adv, asc, desc),
+            '\ue0b2': union(flipped([solid])), '\ue0b3': clipped(flipped(chevron()), adv, asc, desc)}
+
+
+def clipped(polys, adv, asc, desc):
+    """The polygons' union, cut to the cell."""
+    rec = RecordingPen()
+    BooleanOperationManager.intersection(list(polys), [rect(0, desc, adv, asc)], PointToSegmentPen(rec))
+    return oriented(rec)

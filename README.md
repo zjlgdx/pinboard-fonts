@@ -95,7 +95,7 @@ The handwriting fonts carry two alternates of every lowercase letter, accented o
 
 `fontbakery check-universal` passes all 76 checks on each Ballpoint and Marker font with no warnings, and all 142 when a family's Regular and Bold are checked together. Fontbakery's `soft_dotted` check (from the Google Fonts profile) passes too: `i`, `j` and `į` lose their dot under any mark above. On each Typewriter font one check errors: fontbakery 1.1's monospace check reads a `glyf` table, which a CFF font doesn't have. `audit.py` and the build cover what that check would test: one advance, `isFixedPitch`, PANOSE proportion 9, and `xAvgCharWidth`.
 
-The fonts are not hinted. macOS ignores CFF hints, and so does the board's SVG. Run `otfautohint` from the AFDKO before using one as a Windows terminal font.
+The fonts are hinted with AFDKO's `otfautohint`, from alignment zones and standard stems the build measures from the drawn glyphs (the baseline, x-height, cap height with ascenders, and descender zones; `StdVW`/`StdHW` from `l n H I h` and `H E z Z`). Windows and FreeType use the hints to snap those edges and stems to whole pixels at small sizes; macOS ignores them. Box drawing and block elements are left unhinted, so their edges stay on the cell's and rows keep joining. `subset.py` drops the hints, since the board's SVG has no use for them.
 
 ## Licence
 

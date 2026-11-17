@@ -26,6 +26,9 @@ for const, stem in FONTS.items():
     opts.flavor = 'woff2'
     opts.layout_features = ['kern']     # kerning, but not the alternates: labels are short
     opts.name_IDs = [1]
+    # The board's SVG ignores hints; plain charstrings compress best.
+    opts.hinting = False
+    opts.desubroutinize = True
     sub = subset.Subsetter(opts)
     sub.populate(text=texts.get(const, '') + ' ')
     sub.subset(font)

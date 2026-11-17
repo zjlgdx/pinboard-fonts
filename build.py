@@ -38,6 +38,8 @@ What follows the usual type-design rules (see README.md for sources):
     counter-clockwise, as CFF expects
   - vertical metrics follow the Google Fonts guide: typo metrics in use,
     a 1.24 em line, caps centred in it, win metrics at the font's bounds
+  - hinted by AFDKO's otfautohint from alignment zones and stems measured
+    here (box drawing and blocks excepted, so they keep the cell's edges)
   - the .otf is subroutinized; the .woff2 is not, as Brotli packs plain
     charstrings smaller
 """
@@ -62,6 +64,7 @@ from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.recordingPen import RecordingPen
 from fontTools.pens.roundingPen import RoundingPen
 from fontTools.pens.t2CharStringPen import T2CharStringPen
+from fontTools.pens.pointInsidePen import PointInsidePen
 from fontTools.pens.transformPen import TransformPen
 from fontTools.svgLib.path import parse_path
 from fontTools.ttLib import TTFont
@@ -74,7 +77,7 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.400         # head.fontRevision; nameID 5 says the same
+VERSION = 0.410         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -568,6 +571,92 @@ def bounds(rec):
     return bp.bounds
 
 
+def ink_runs(rec, fixed, lo, hi, vertical=False, step=1.0):
+    """Lengths of ink along a line: across x at height `fixed`, or (vertical)
+    down y at x = `fixed`, between lo and hi."""
+    runs, start, t = [], None, lo
+    while t <= hi:
+        pen = PointInsidePen(None, (fixed, t) if vertical else (t, fixed))
+        rec.replay(pen)
+        if pen.getResult():
+            start = t if start is None else start
+        elif start is not None:
+            runs.append(t - start)
+            start = None
+        t += step
+    return runs
+
+
+# The zones a hinting rasteriser aligns, each measured from the ink: flat
+# letters give its edge, round ones its overshoot.
+ZONES = {
+    'baseline': ('xzHEILTnmhuvw', 'oceOCS03', 1),
+    'x-height': ('xzvwuyn', 'oces', 3),
+    'cap': ('HEFTZ157', 'OCGQS0368', 3),
+    'ascender': ('bdhkl', '', 3),
+    'descender': ('pq', 'gy', 1),
+}
+
+
+def private_dict(by_char):
+    """CFF hinting values: alignment zones (BlueValues, OtherBlues) and the
+    standard stems, measured from the drawn glyphs, as the Type 1 spec asks.
+    A hand's jitter spreads a zone, so BlueScale shrinks to keep the largest
+    zone legal (BlueScale x height < 1); overshoots are then suppressed up to
+    a slightly smaller size."""
+    def edge(c, i):
+        return bounds(by_char[c]['rec'])[i]
+
+    zones = {}
+    for name, (flat, rnd, i) in ZONES.items():
+        f = sorted(edge(c, i) for c in flat)
+        r = sorted(edge(c, i) for c in rnd)
+        if i == 1:      # a bottom zone: from the lowest overshoot (one outlier spared) up to the flat edges
+            lo = min(f + r[1:2] if r else f)
+            hi = max(f)
+        else:           # a top zone: from the flat edges up to the highest overshoot
+            lo = min(f)
+            hi = max(f + r[-2:-1] if r else f)
+        zones[name] = [math.floor(lo), math.ceil(hi)]
+    # Top zones that touch (cap height and ascenders) are one zone.
+    tops = sorted([zones['x-height'], zones['cap'], zones['ascender']])
+    merged = [tops[0]]
+    for z in tops[1:]:
+        if z[0] <= merged[-1][1] + 3:
+            merged[-1] = [merged[-1][0], max(merged[-1][1], z[1])]
+        else:
+            merged.append(z)
+    blues = zones['baseline'] + [v for z in merged for v in z]
+    tallest = max(b - a for a, b in zip(blues[::2], blues[1::2]))
+
+    def median(xs):
+        xs = sorted(xs)
+        return round(xs[len(xs) // 2])
+    xh = zones['x-height'][0]
+    cap = zones['cap'][0]
+    base = zones['baseline'][1]
+    vw = []
+    for c, y in (('l', xh / 2), ('n', xh / 2), ('H', base + (cap - base) * 0.25), ('I', cap / 2), ('h', xh / 2)):
+        g = by_char[c]['rec']
+        xmin, _, xmax, _ = bounds(g)
+        vw += ink_runs(g, y, xmin - 2, xmax + 2)[:1]
+    hw = []
+    for c, xf in (('H', 0.5), ('E', 0.75), ('z', 0.5), ('Z', 0.5)):
+        g = by_char[c]['rec']
+        xmin, ymin, xmax, ymax = bounds(g)
+        hw += ink_runs(g, xmin + (xmax - xmin) * xf, ymin - 2, ymax + 2, vertical=True)
+    std_vw, std_hw = median(vw), median(hw)
+    return {
+        'BlueValues': blues,
+        'OtherBlues': zones['descender'],
+        'BlueScale': min(0.039625, round(0.99 / tallest, 6)),
+        'BlueShift': 7,
+        'BlueFuzz': 0,
+        'StdVW': std_vw, 'StdHW': std_hw,
+        'StemSnapV': [std_vw], 'StemSnapH': [std_hw],
+    }
+
+
 def without_specks(rec, least=450):
     """Drop contours under `least` square font units (the 400 floor, with
     room for rounding): a counter a heavy pen has all but closed, or a speck
@@ -993,7 +1082,7 @@ def make(style, shared=None):
     fb.setupGlyphOrder(order)
     fb.setupCharacterMap(cmap)
     fb.setupCFF(ps, {'FullName': f'{family} {style.weight}', 'FamilyName': family, 'Weight': style.weight},
-                charstrings, {})
+                charstrings, private_dict(by_char))
     fb.setupHorizontalMetrics(metrics)
     fb.setupHorizontalHeader(
         ascent=TYPO_ASC, descent=TYPO_DESC, lineGap=0, caretSlopeRise=1, caretSlopeRun=0)
@@ -1053,6 +1142,25 @@ def make(style, shared=None):
     return font, shared
 
 
+def autohint(font):
+    """Stem and zone hints from AFDKO's otfautohint, for rasterisers that
+    use them (Windows, FreeType). Box drawing and blocks are left unhinted:
+    their edges are the cell's, and must not move to the pixel grid on
+    their own or rows would stop joining."""
+    cmap = font.getBestCmap()
+    cell = sorted({cmap[cp] for cp in cmap if 0x2500 <= cp < 0x25A0 or cp == 0x23BF})
+    with tempfile.TemporaryDirectory() as t:
+        src, dst = Path(t) / 'in.otf', Path(t) / 'out.otf'
+        font.save(src)
+        cmd = [str(Path(sys.executable).parent / 'otfautohint'), str(src), '-o', str(dst)]
+        if cell:
+            cmd += ['-x', ','.join(cell)]
+        subprocess.run(cmd, check=True, capture_output=True)
+        hinted = TTFont(dst)
+        hinted.ensureDecompiled()
+    return hinted
+
+
 def build(key):
     """Regular, then Bold on the Regular's line; both get the family's
     largest ink bounds as win metrics, so neither clips the other's glyphs."""
@@ -1063,6 +1171,7 @@ def build(key):
     OUT.mkdir(exist_ok=True)
     for font in (regular, bold):
         font['OS/2'].usWinAscent, font['OS/2'].usWinDescent = win_asc, win_desc
+        font = autohint(font)
         # Shared runs of outline (an accented letter's base, a repeated
         # stroke) become CFF subroutines: the same glyphs, smaller files.
         cffsubr.subroutinize(font)

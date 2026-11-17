@@ -15,6 +15,8 @@ Each family comes in **Regular** and **Bold**, style-linked, so an app's Bold bu
 All three fonts cover:
 
 - ASCII, Latin-1 and Windows-1252: every accented letter of Western European languages (`À`–`ÿ`, `Š š Ž ž Ÿ Œ œ`), `Æ Ð Ø Þ ß æ ð ø þ ı`, and the punctuation and signs `¡ ¿ « » ‹ › ‚ „ † ‡ ‰ § ¶ © ® ™ ª º ¹ ² ³ ¼ ½ ¾ ¦ ¤ ƒ`, plus `… ° • ·`, curly quotes, dashes and a no-break space
+- Latin Extended-A, the whole block (U+0100–017F), for Central European, Baltic, Turkish, Maltese, Welsh and Esperanto: `Ą Ć Č Ď Ę Ě Ğ Ģ Ħ İ Ķ Ł Ľ Ń Ő Ř Ś Ş Ţ Ů Ű Ź Ż Ŋ Ĳ` and their lowercase, plus Romanian `Ș ș Ț ț` and dotless `ȷ`
+- combining marks (U+0300–0328 as Latin uses them: grave, acute, circumflex, tilde, macron, breve, dot, diaeresis, ring, double acute, caron, turned comma, comma below, cedilla, ogonek), placed on any letter by anchors and stacked on each other, with `◌` to show one alone; and the spacing accents `´ ¨ ¯ ¸ ˆ ˜ ˇ ˘ ˙ ˚ ˛ ˝`
 - currency: `$ ¢ £ ¥ €`
 - math: `+ − × ÷ ± = ≠ ≈ < > ≤ ≥ ¬`, all on one width
 - arrows and marks: `← → ↑ ↓ ↔ ↕ ✓ ✗ ● ○`
@@ -25,7 +27,7 @@ The Typewriter adds what a terminal draws:
 - block elements, the whole block (U+2580–259F): halves, eighths, quadrants and shades `░ ▒ ▓`
 - the marks Claude Code prints: `❯ ⏺ ⎿ ✻ ✽ ✶ ✳ ✢ ✓ ✔ ✗ ✘ ⏵ ⏸ ☐ ☒ ☑`, and `■ □ ◼ ◻ ▪ ▫ ◆ ◇ ▶ ◀ ▲ ▼ ▸ ◯ ◉ ⚠ ↵ ⏎ ⌘ ⌥ ⌃ ⇧`
 
-Box drawing and blocks fill the whole cell, 600 units wide and the full 1.24 em line high, so lines join across columns and rows when the terminal's line height is 1.0 (the font's own line). There is no Greek, Cyrillic or CJK, and no Latin Extended beyond Windows-1252; text in those falls back to another font.
+Box drawing and blocks fill the whole cell, 600 units wide and the full 1.24 em line high, so lines join across columns and rows when the terminal's line height is 1.0 (the font's own line). There is no Greek, Cyrillic or CJK, and no Latin beyond Extended-A as precomposed letters (Vietnamese, for one, is built from combining marks); text the fonts lack falls back to another font.
 
 ## Use the fonts
 
@@ -54,10 +56,10 @@ Two scripts serve the Pinboard theme. Each reads the words to draw as JSON on st
 
 ## How a glyph is made
 
-1. `skeleton.py` holds each letter's centre line as an SVG path on a 1000-unit canvas, with y pointing down. An accented letter is its base letter's skeleton plus a mark; a few letters (`Ø Ð ø ¢`) are a base letter plus a stroke.
+1. `skeleton.py` holds each letter's centre line as an SVG path on a 1000-unit canvas, with y pointing down. An accented letter is its base letter's skeleton plus a mark; a few letters (`Ø Ð Đ Ħ Ł Ŧ Ŀ` and their lowercase, `¢`) are a base letter plus a stroke. The same placement gives the combining marks their anchors.
 2. `build.py` draws that line with a pen on a large bitmap: a round pen, a chisel nib, or a round pen plus slab serifs and ribbon ink. A closed path ending in `F` is filled as well as drawn (`● ■ ▶`).
 3. potrace traces the bitmap back into curves, which become a CFF outline.
-4. The glyph is spaced from its own profile, kerned against every other glyph, and written out.
+4. The glyph is spaced from its own profile, kerned against every other glyph, and written out. In the `.otf`, shared runs of outline become CFF subroutines (`cffsubr`); the `.woff2` leaves them out, since Brotli compresses plain outlines smaller.
 5. The Bold draws the same skeletons with a wider pen, and goes through steps 3 and 4 again.
 6. `cells.py` builds the Typewriter's box drawing and block elements as exact rectangles and quarter circles, with no pen and no ribbon.
 
@@ -72,11 +74,13 @@ Two scripts serve the Pinboard theme. Each reads the words to draw as JSON on st
 | Kerning never makes shapes touch | Over every row both glyphs ink, tails and accents included, a kerned pair keeps at least 12 units of white. A pair that would collide unkerned (`qj`, `jj`) is spaced apart instead. | |
 | Accented letters reuse their base letter | `é` is `e`'s own drawing plus an acute: same width, same sidebearings, and `e`'s kerning class. Where the accent alone would collide (`T` over `ï`), a glyph pair overrides the class. `i` and `j` take the dotless form under a mark. | [Glyphs: diacritics](https://glyphsapp.com/learn/diacritics) |
 | Marks sit clear of the letter, and scale with the pen | A mark's foot sits a fixed gap above the overshoot, measured from where the pen's ink ends, so a heavier pen lifts it. Capital marks are flatter, so they fit under the line's ascender. Rings and cedillas grow with the pen so their eye and curl stay open. | [Microsoft: diacritics](https://learn.microsoft.com/en-us/typography/develop/character-design-standards/diacritics) |
-| Legacy (spacing) accents are not marks | `´ ¨ ¯ ¸ ˆ ˜` have width and no anchors. | Fontbakery `legacy_accents` |
+| Each language's own form of a mark | Latvian `Ģ Ķ Ļ Ņ Ŗ` and Romanian `Ș Ț` take a comma below, Latvian `ģ` a turned comma above; Turkish `Ş Ţ` keep the cedilla. Czech and Slovak `ď ľ ť Ľ` take an apostrophe beside the stem, and the letter widens by what it adds. An ogonek grows from the stem or curve it hangs on, and `į` keeps its dot. | [Diacritics project](https://diacritics.typo.cz/) |
+| Combining marks attach by anchors | Every letter has `top`, `bottom`, `cedilla` and `ogonek` anchors where the same code puts its precomposed marks, carried through the hand's own lean and jitter, so `x́` sits as `á` does. Marks have no width and are GDEF marks. `ccmp` drops the dot of `i` and `j` under a mark above and swaps in a flatter `.case` mark over a capital; `mkmk` stacks marks; `calt` and `kern` look through them. | [OpenType: GPOS mark-to-base](https://learn.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-4-mark-to-base-attachment-positioning-subtable), [Glyphs: diacritics](https://glyphsapp.com/learn/diacritics) |
+| Legacy (spacing) accents are not marks | `´ ¨ ¯ ¸ ˆ ˜ ˇ ˘ ˙ ˚ ˛ ˝` have width and no anchors. | Fontbakery `legacy_accents` |
 | A Bold is a weight of the same design | Same skeletons, a wider pen: stems 1.4 to 1.6 times the Regular's (Ballpoint 48 → 77, Marker 88 → 123, Typewriter 62 → 96 units). The handwriting widens 8% so counters stay open, and the Typewriter's serifs give back a little so `m`'s feet stay apart. Spaced and kerned from its own outlines. | |
 | Style-linked weights | Regular: `usWeightClass` 400, fsSelection REGULAR. Bold: 700, fsSelection BOLD, `head.macStyle` bold. Both share the family name, with the weight as subfamily (RIBBI), and share vertical metrics and underline, so lines don't jump between weights. | [OpenType: OS/2](https://learn.microsoft.com/en-us/typography/opentype/spec/os2), [Google Fonts: naming](https://googlefonts.github.io/gf-guide/statics.html) |
 | Math signs share one width | `+ = < > × ~` are centred in one width. | Fontbakery `math_signs_width` |
-| Monospace: one advance for every glyph, narrow letters widened, wide ones squeezed | Typewriter: 600 everywhere, `.notdef` and box drawing included. Symbols keep their proportions and only shrink to fit. `post.isFixedPitch` is set and PANOSE proportion is 9. | [Google Fonts requirements](https://googlefonts.github.io/gf-guide/requirements.html) |
+| Monospace: one advance for every glyph, narrow letters widened, wide ones squeezed | Typewriter: 600 everywhere, `.notdef` and box drawing included; combining marks are zero width, as a terminal expects, and hang over the cell before them. Symbols keep their proportions and only shrink to fit. `post.isFixedPitch` is set and PANOSE proportion is 9. | [Google Fonts requirements](https://googlefonts.github.io/gf-guide/requirements.html) |
 | Box drawing joins | Lines are centred on the cell and run to its edges: 0 and 600 across, the typo descender and ascender up and down. Light lines are as heavy as a stem, heavy lines 1.9 times that. Double lines turn corners on their inner and outer lines. | [Unicode: box drawing](https://www.unicode.org/charts/PDF/U2500.pdf) |
 | Tell 0 from O, and 1 from l from I, in a monospace | Typewriter zero has a dot. 1 has a flag and foot, l a tail, I two slabs. | |
 | Outer contours counter-clockwise, no overlaps, points at extremes | potrace gives non-overlapping, correctly wound contours, and box-drawing pieces are merged into one outline. `ExtremaPen` splits every curve at its extremes. No contour is under 400 units²: a counter the Bold pen all but closes is filled. | [Adobe Type 1 spec §3.5, §4.1](https://adobe-type-tools.github.io/font-tech-notes/pdfs/T1_SPEC.pdf), [Glyphs: drawing good paths](https://glyphsapp.com/learn/drawing-good-paths) |
@@ -89,7 +93,7 @@ The handwriting fonts carry two alternates of every lowercase letter, accented o
 
 ## Checks
 
-`fontbakery check-universal` passes all 72 checks on each Ballpoint and Marker font with no warnings, and all 134 when a family's Regular and Bold are checked together. On each Typewriter font one check errors: fontbakery 1.1's monospace check reads a `glyf` table, which a CFF font doesn't have. `audit.py` and the build cover what that check would test: one advance, `isFixedPitch`, PANOSE proportion 9, and `xAvgCharWidth`.
+`fontbakery check-universal` passes all 76 checks on each Ballpoint and Marker font with no warnings, and all 142 when a family's Regular and Bold are checked together. Fontbakery's `soft_dotted` check (from the Google Fonts profile) passes too: `i`, `j` and `į` lose their dot under any mark above. On each Typewriter font one check errors: fontbakery 1.1's monospace check reads a `glyf` table, which a CFF font doesn't have. `audit.py` and the build cover what that check would test: one advance, `isFixedPitch`, PANOSE proportion 9, and `xAvgCharWidth`.
 
 The fonts are not hinted. macOS ignores CFF hints, and so does the board's SVG. Run `otfautohint` from the AFDKO before using one as a Windows terminal font.
 

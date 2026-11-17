@@ -129,6 +129,8 @@ def main():
             if 'GPOS' in font:
                 names = {cmap[ord(c)]: c for c in chars if c != ' '}
                 for lk in font['GPOS'].table.LookupList.Lookup:
+                    if lk.LookupType != 2:      # pair kerning only, not mark attachment
+                        continue
                     for st in lk.SubTable:
                         if getattr(st, 'Format', None) == 1:
                             # Glyph pairs (an accent under a T) come first in the

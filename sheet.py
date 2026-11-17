@@ -17,6 +17,7 @@ SIZE = 40
 LINES = ['nnnonnnoonnn HHHOHHHOOHHH 000100 hamburgefonstiv',
          'To Ty Yo We Av LT P. r. F, “A” (j) f/ bookkeeper 11:00',
          'Ça déjà vu? Zürich, São Paulo, Ærøskøbing, Œuvre, Ñandú',
+         'Łódź, Křižík, Győr, İstanbul, Ţară, Ģirts, ďaleký, Ĳssel ◌̂',
          '€12 £3 ¥5 ¢ © ® ™ ± ÷ ≠ ≤ ¿¡ «oui» ½ ¾ § ¶ ← → ✓ ✗',
          '\\ ^ ` { | } ~ … ° • 0O 1lI']
 BOLD = 'Bold: hamburgefonstiv, Zürich €12 ✓'

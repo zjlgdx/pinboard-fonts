@@ -29,12 +29,17 @@ What follows the usual type-design rules (see README.md for sources):
   - an accented letter is its base letter's drawing plus a mark, placed
     clear of the letter for the pen in use; it keeps the base's spacing
     and kerning class, with its own pair wherever the accent would collide
+  - combining marks are zero-width GDEF marks, attached by anchors taken
+    from the same placement (mark, mkmk), with ccmp for dotless i and j and
+    for the flatter capital forms of marks above
   - the typewriter's box drawing and block elements are made to the cell,
     not with a pen, so they join across columns and rows
   - curves get points at their extremes; outer contours run
     counter-clockwise, as CFF expects
   - vertical metrics follow the Google Fonts guide: typo metrics in use,
     a 1.24 em line, caps centred in it, win metrics at the font's bounds
+  - the .otf is subroutinized; the .woff2 is not, as Brotli packs plain
+    charstrings smaller
 """
 
 import math
@@ -62,12 +67,14 @@ from fontTools.svgLib.path import parse_path
 from fontTools.ttLib import TTFont
 
 import cells
-from skeleton import ACCENTED, ALL, KEEP_SHAPE, base_of, charset, parts
+import cffsubr
+from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_anchors, base_of, charset,
+                      mark_anchors, parts)
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.300         # head.fontRevision; nameID 5 says the same
+VERSION = 0.400         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -298,11 +305,27 @@ class Style:
         self.bold = bold
         self.weight = 'Bold' if bold else 'Regular'
 
-    def strokes(self, ch, step, warp):
+    def parts(self, ch, variant=0):
+        return parts(ch, self.reach, self.mono, self.ring, self.hook, variant)
+
+    def strokes(self, ch, step, warp, variant=0):
         out = []
-        for role, d, w in parts(ch, self.reach, self.mono, self.ring, self.hook):
+        for role, d, w in self.parts(ch, variant):
             out += prepare(role, self.ink_dots(d), step, warp, w)
         return out
+
+    def anchors(self, ch, variant=0):
+        """GPOS anchors in skeleton units, before the hand's warp:
+        (own, stack). A letter has only `stack` (where marks attach to it); a
+        combining mark has `own` (its attachment point) and, above, `stack`."""
+        if ch in COMBINING_MARKS:
+            return mark_anchors(ch, self.reach, self.ring, self.hook, variant == 1)
+        return {}, base_anchors(ch, self.reach, self.ring, self.hook)
+
+    def draw(self, ch, img, variant=0):
+        warp, _rng = self.warp(ch, variant)
+        self.pen(ImageDraw.Draw(img), self.strokes(ch, 1.0, warp, variant))
+        return img
 
     def ink_dots(self, d):
         return d
@@ -312,7 +335,7 @@ class Style:
         wider about its own centre (the base letter's, for an accented one)."""
         if self.widen == 1.0:
             return lambda x: x
-        cx = centre_x(parts(ch, self.reach, self.mono, self.ring, self.hook)[0][1])
+        cx = centre_x(self.parts(ch)[0][1])
         return lambda x: cx + (x - cx) * self.widen
 
 
@@ -337,7 +360,7 @@ class Ballpoint(Style):
         # A ring's radius and a cedilla's size: their eye and curl stay open under a heavier pen.
         self.ring, self.hook = (76, 1.3) if bold else (50, 1.0)
 
-    def draw(self, ch, img, variant=0):
+    def warp(self, ch, variant=0):
         rng = random.Random(seed_for('ballpoint', base_of(ch) + '#' * variant))
         # Each letter leans, sits and sizes a little differently, kept small
         # enough that no one letter jumps out of a word.
@@ -353,9 +376,10 @@ class Ballpoint(Style):
             y += 3 * math.sin(x * 0.010 + ay)
             y = BASE + (y - BASE) * sz + dy
             return x + (BASE - y) * k, y
+        return warp, rng
 
-        round_pen(ImageDraw.Draw(img), self.strokes(ch, 1.0, warp), radius=self.radius, taper=0.15)
-        return img
+    def pen(self, draw, strokes):
+        round_pen(draw, strokes, radius=self.radius, taper=0.15)
 
 
 class Marker(Style):
@@ -380,9 +404,9 @@ class Marker(Style):
         # A chisel dot is a short dab, not a touch.
         return d.replace('l2 8', 'l16 26')
 
-    def strokes(self, ch, step, warp):
+    def strokes(self, ch, step, warp, variant=0):
         out = []
-        for role, d, w in parts(ch, self.reach, self.mono, self.ring, self.hook):
+        for role, d, w in self.parts(ch, variant):
             if role == 'mark' and 'l2 8' in d:
                 # Two nib-shaped dabs side by side read as a double acute (ű):
                 # an accent's dots are finer and pulled square across the nib.
@@ -391,7 +415,7 @@ class Marker(Style):
                 out += prepare(role, self.ink_dots(d), step, warp, w)
         return out
 
-    def draw(self, ch, img, variant=0):
+    def warp(self, ch, variant=0):
         rng = random.Random(seed_for('marker', base_of(ch) + '#' * variant))
         ax = rng.uniform(0, 6)
         dy = rng.uniform(-3, 3)
@@ -405,9 +429,10 @@ class Marker(Style):
             x, y = x - 300, y - 450
             x, y = x * cr - y * sr, x * sr + y * cr
             return x + 300, y + 450 + dy
+        return warp, rng
 
-        nib_pen(ImageDraw.Draw(img), self.strokes(ch, 1.0, warp), half_w=self.half_w, half_t=self.half_t, angle=35)
-        return img
+    def pen(self, draw, strokes):
+        nib_pen(draw, strokes, half_w=self.half_w, half_t=self.half_t, angle=35)
 
 
 SERIF = re.compile(r'M(-?[\d.]+) (-?[\d.]+) L(-?[\d.]+) (-?[\d.]+)')
@@ -446,9 +471,14 @@ class Typewriter(Style):
                     f'L{x1 - (x1 - x0) * t:.1f} {y1 - (y1 - y0) * t:.1f}')
         return SERIF.sub(shorter, d)
 
-    def draw(self, ch, img, variant=0):
+    def parts(self, ch, variant=0):
+        return [(role, self.serifs(d) if role == 'serif' else d, w)
+                for role, d, w in parts(ch, self.reach, True, self.ring, self.hook, variant)]
+
+    def warp(self, ch, variant=0):
+        # Keys don't vary: a variant is only ever a combining mark's capital form.
         rng = random.Random(seed_for('typewriter', base_of(ch)))
-        ps = [(role, self.serifs(d) if role == 'serif' else d, w) for role, d, w in parts(ch, self.reach, True, self.ring, self.hook)]
+        ps = self.parts(ch, variant)
         # An accent doesn't change how its letter fills the cell.
         body = [d for role, d, _w in ps if role != 'mark'] or [d for _r, d, _w in ps]
         raw = [p for d in body for p in skeleton_points(d)]
@@ -474,9 +504,12 @@ class Typewriter(Style):
             x, y = x - mid, y - 400
             x, y = x * cr - y * sr, x * sr + y * cr
             return x + mid, y + 400 + dy
+        return warp, rng
 
+    def draw(self, ch, img, variant=0):
+        warp, rng = self.warp(ch, variant)
         strokes = []
-        for role, d, w in ps:
+        for role, d, w in self.parts(ch, variant):
             strokes += prepare(role, d, 2.0, warp, w)
         round_pen(ImageDraw.Draw(img), strokes, radius=self.radius, dot=self.dot)
         return self.ink(img, rng)
@@ -639,6 +672,12 @@ def glyph_name(ch):
     return UV2AGL.get(cp, f'uni{cp:04X}')
 
 
+def suffix(ch, variant):
+    if not variant:
+        return ''
+    return '.case' if ch in COMBINING_MARKS else f'.alt{variant}'
+
+
 def notdef(width):
     pen = T2CharStringPen(width, None)
     for (x0, y0, x1, y1), outer in (((60, 0, width - 60, 600), True), ((110, 50, width - 110, 550), False)):
@@ -701,11 +740,65 @@ def kerning(glyphs, strength=0.55, floor=80):
     return pairs
 
 
-def features(style, glyphs, pairs):
-    """calt alternates and kern, as feature-file text. An accented letter
-    kerns in its base letter's class; where its accent changes the answer
-    (an accent under a T's bar), a glyph pair says so first."""
+def anchor(p):
+    return f'<anchor {p[0]} {p[1]}>'
+
+
+def mark_features(glyphs, anchors):
+    """GDEF classes, and ccmp, mark and mkmk for the combining marks: an i
+    or j drops its dot under a mark above, a mark above a capital takes its
+    flatter .case form, and marks stack."""
+    marks = [n for n, g in glyphs.items() if g['ch'] in COMBINING_MARKS]
+    top = [n for n in marks if ANCHOR[COMBINING_MARKS[glyphs[n]['ch']]] == 'top' and not n.endswith('.case')]
+    below = [n for n in marks if ANCHOR[COMBINING_MARKS[glyphs[n]['ch']]] != 'top']
+    caps = [n for n, g in glyphs.items() if kind(g['ch']) == 'upper']
+    bases = [n for n in glyphs if n not in marks]
+    fea = [f'@top_marks = [{" ".join(top)}];',
+           f'@top_case = [{" ".join(n + ".case" for n in top)}];',
+           f'@below_marks = [{" ".join(below)}];',
+           f'@caps = [{" ".join(caps)}];',
+           f'lookup dotless {{ sub i by {glyph_name("ı")}; sub j by {glyph_name("ȷ")}; }} dotless;',
+           f'lookup unmake {{ sub {glyph_name("į")} by i {glyph_name(chr(0x328))}; }} unmake;',
+           'lookup case_marks { sub @top_marks by @top_case; } case_marks;',
+           'feature ccmp {',
+           # į under a mark above: back to i and an ogonek, so the i can drop its dot.
+           f"  lookup ccmp_unmake {{ sub {glyph_name('į')}' lookup unmake @top_marks;"
+           f" sub {glyph_name('į')}' lookup unmake @below_marks @top_marks; }} ccmp_unmake;",
+           "  lookup ccmp_dotless {",
+           "    sub [i j]' lookup dotless @top_marks;",
+           "    sub [i j]' lookup dotless @below_marks @top_marks;",
+           "    sub [i j]' lookup dotless @below_marks @below_marks @top_marks;",
+           "  } ccmp_dotless;",
+           "  lookup ccmp_case {",
+           "    sub @caps @top_marks' lookup case_marks;",
+           "    sub @caps @below_marks @top_marks' lookup case_marks;",
+           "    sub @caps @top_case @top_marks' lookup case_marks;",
+           "    sub @caps @top_case @top_case @top_marks' lookup case_marks;",
+           "  } ccmp_case;",
+           '} ccmp;']
+    for n in marks:
+        (cls, p), = anchors[n][0].items()
+        fea.append(f'markClass {n} {anchor(p)} @{cls};')
+    fea.append('feature mark {')
+    for n in bases:
+        if n in anchors:
+            fea.append(f'  pos base {n} ' + ' '.join(f'{anchor(p)} mark @{c}' for c, p in sorted(anchors[n][1].items())) + ';')
+    fea += ['} mark;', 'feature mkmk {']
+    for n in marks:
+        for c, p in anchors[n][1].items():
+            fea.append(f'  pos mark {n} {anchor(p)} mark @{c};')
+    fea += ['} mkmk;',
+            f'table GDEF {{ GlyphClassDef [{" ".join(bases)}], , [{" ".join(marks)}], ; }} GDEF;']
+    return fea
+
+
+def features(style, glyphs, pairs, anchors):
+    """ccmp and mark positioning, calt alternates and kern, as feature-file
+    text. An accented letter kerns in its base letter's class; where its
+    accent changes the answer (an accent under a T's bar), a glyph pair says
+    so first. Alternates and kerning look through combining marks."""
     fea = ['languagesystem DFLT dflt;', 'languagesystem latn dflt;']
+    fea += mark_features(glyphs, anchors)
     if style.alternates:
         lower = [g['ch'] for g in glyphs.values() if g['variant'] == 0 and kind(g['ch']) == 'lower'
                  and f'{glyph_name(g["ch"])}.alt1' in glyphs]
@@ -716,7 +809,8 @@ def features(style, glyphs, pairs):
                     f'lookup to_alt{v} {{ sub @cycle0 by @cycle{v}; }} to_alt{v};']
         # Each lowercase letter after another takes the next drawing in turn:
         # "book" is written o, o.alt1 -- never the same o twice in a row.
-        rules = [f"  sub @cycle{v} @cycle0' lookup to_alt{v + 1};" for v in range(style.alternates - 1, 0, -1)]
+        rules = ['  lookupflag IgnoreMarks;']
+        rules += [f"  sub @cycle{v} @cycle0' lookup to_alt{v + 1};" for v in range(style.alternates - 1, 0, -1)]
         rules.append("  sub @cycle0 @cycle0' lookup to_alt1;")
         fea += ['feature calt {'] + rules + ['} calt;']
     if pairs:
@@ -744,7 +838,7 @@ def features(style, glyphs, pairs):
                     for na in variants[a]:
                         for nb in variants[b]:
                             exceptions.append(f'  pos {na} {nb} {own};')
-        fea += ['feature kern {'] + exceptions + lines + ['} kern;']
+        fea += ['feature kern {', '  lookupflag IgnoreMarks;'] + exceptions + lines + ['} kern;']
     return '\n'.join(fea)
 
 
@@ -761,6 +855,8 @@ def make(style, shared=None):
         tmp = Path(t)
         for ch in charset(style.mono):
             variants = style.alternates if kind(ch) == 'lower' else 0
+            if ch in COMBINING_MARKS and ANCHOR[COMBINING_MARKS[ch]] == 'top':
+                variants = 1        # the capital form, `.case`
             for v in range(variants + 1):
                 img = Image.new('L', (int(W * S), int(H * S)), 0)
                 img = style.draw(ch, img, v)
@@ -772,7 +868,7 @@ def make(style, shared=None):
                     print(f'  {ch!r}: empty, skipped')
                     continue
                 left, right = profile(img, slant)
-                name = glyph_name(ch) + (f'.alt{v}' if v else '')
+                name = glyph_name(ch) + suffix(ch, v)
                 glyphs[name] = {'ch': ch, 'rec': rec, 'left': left, 'right': right, 'variant': v}
                 if v == 0:
                     by_char[ch] = glyphs[name]
@@ -828,9 +924,33 @@ def make(style, shared=None):
             for k in ('dx', 'adv', 'zsbL', 'zsbR', 'zone'):
                 if k in b:
                     g[k] = b[k]
+            # An apostrophe caron (ď ľ ť) stands beside the ascender: the
+            # letter grows by what it adds on the right.
+            if not style.mono and ACCENTED[g['ch']][1] == 'caronvert':
+                g['adv'] += max(0, round(np.nanmax(g['right']) - np.nanmax(b['right'])))
+    # A combining mark has no width: it hangs left of where the pen stands,
+    # over the middle of the letter before it, for apps that don't position it.
+    over = style.advance / 2 if style.mono else by_char['n']['adv'] / 2
+    for g in glyphs.values():
+        if g['ch'] in COMBINING_MARKS:
+            xmin, _, xmax, _ = bounds(g['rec'])
+            g['adv'], g['dx'] = 0, -over - (xmin + xmax) / 2
     for g in glyphs.values():
         g['left'] = g['left'] + g['dx']
         g['right'] = g['right'] + g['dx']
+
+    # Where marks attach, through the same hand that drew the glyph.
+    anchors = {}
+    for name, g in glyphs.items():
+        ch, v = g['ch'], g['variant']
+        if not (ch in COMBINING_MARKS or ch == '◌' or unicodedata.category(ch).startswith('L')):
+            continue
+        warp, _rng = style.warp(ch, v)
+        def font_pt(p, g=g, warp=warp):
+            x, y = warp(*p)
+            return round(x * K + g['dx']), round((BASE - y) * K)
+        own, stack = style.anchors(ch, v)
+        anchors[name] = ({c: font_pt(p) for c, p in own.items()}, {c: font_pt(p) for c, p in stack.items()})
 
     # Box drawing and blocks, made to the cell (typewriter only).
     if style.mono:
@@ -925,7 +1045,9 @@ def make(style, shared=None):
     os2.recalcCodePageRanges(font)
     os2.recalcAvgCharWidth(font)
 
-    addOpenTypeFeaturesFromString(font, features(style, glyphs, pairs))
+    addOpenTypeFeaturesFromString(font, features(style, glyphs, pairs, anchors))
+    from fontTools.otlLib.maxContextCalc import maxCtxFont
+    os2.usMaxContext = maxCtxFont(font)
     print(f'{family} {style.weight}: {len(order)} glyphs, {len(cmap)} characters, {len(pairs)} kerned character pairs, '
           f'x-height {x_height}, cap height {cap_height}')
     return font, shared
@@ -941,10 +1063,16 @@ def build(key):
     OUT.mkdir(exist_ok=True)
     for font in (regular, bold):
         font['OS/2'].usWinAscent, font['OS/2'].usWinDescent = win_asc, win_desc
+        # Shared runs of outline (an accented letter's base, a repeated
+        # stroke) become CFF subroutines: the same glyphs, smaller files.
+        cffsubr.subroutinize(font)
         ps = font['name'].getDebugName(6)
         otf = OUT / f'{ps}.otf'
         font.save(otf)
+        # Brotli finds the repeats itself, and packs plain charstrings
+        # tighter than subroutine calls: the web font goes without.
         w = TTFont(otf)
+        cffsubr.desubroutinize(w)
         w.flavor = 'woff2'
         w.save(OUT / f'{ps}.woff2')
         print(f'  -> {otf.name}, {otf.stat().st_size // 1024} KB')

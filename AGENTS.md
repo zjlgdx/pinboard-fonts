@@ -19,7 +19,8 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 | --- | --- |
 | `skeleton.py` | Every glyph's centre line as an SVG path. The canvas is 1000 units with y pointing down: the cap line and figures sit at 50, the x-height at 250, the baseline at 750, the descender at 960 and ascenders at 40. |
 | `build.py` | The pens, the bitmap, potrace, spacing, kerning, features, hinting and the OpenType writer. `VERSION` is head.fontRevision and nameID 5. |
-| `cells.py` | The Typewriter's box drawing and block elements, drawn exactly to the 600-unit cell. |
+| `cells.py` | The Typewriter's box drawing, block elements and Powerline separators, drawn exactly to the 600-unit cell. |
+| `hanzi.py`, `hanzi_strokes.py` | Chinese: the stroke kinds, how the pen moves along them, and each family's cut (`CUTS`: pen, pressure, rise, lean, hand); then the characters as strokes and components on a 1000 grid (y down). Add a round's characters to `hanzi_strokes.py`, reusing the components already there; a character drawn once serves all three families. |
 | `audit.py`, `proof.py`, `spacing.py`, `sheet.py` | Checks and proof sheets. `sheet.py docs/specimen.png` makes the README's specimen. |
 | `outline.py`, `subset.py` | Letters for the Pinboard theme's board: SVG outlines, or WOFF2 subsets. |
 | `out/` | The built fonts, committed. Merged builds over a few MB go to GitHub Releases, not git. |
@@ -27,7 +28,7 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 ## How to work
 
 - **Design first.** Any change to how glyphs look starts as a proof image: the new glyphs beside the old ones and the letters they sit with, at text and display sizes, in both weights. Get it agreed before changing the build. The Pinboard theme project keeps the design board.
-- **One slice per pull request.** Work is split into GitHub milestones and issues; a PR closes the issues it finishes. Chinese grows by frequency, a few hundred characters per round, reusing the strokes and components already drawn.
+- **One slice per pull request.** Work is split into GitHub milestones and issues; a PR closes the issues it finishes. Chinese grows by frequency, a few hundred characters per round, Traditional and Simplified together, reusing the strokes and components already drawn. Draw each in the form its own standard writes (Taiwan's 教育部 standard forms for Traditional, mainland China's 通用规范汉字表 for Simplified), and add a mainland form of a shared mark to `ZHS` when it sits differently.
 - **Keep the README true.** The character set, the rules table and the check results must match what the build gives.
 - **Bump `VERSION`** in `build.py` for each release, then rebuild every font so they all carry it.
 

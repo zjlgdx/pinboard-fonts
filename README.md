@@ -36,6 +36,8 @@ Every family has Chinese, Traditional and Simplified, written with its own pen: 
 
 Box drawing and blocks fill the whole cell, 600 units wide and the full 1.24 em line high, so lines join across columns and rows when the terminal's line height is 1.0 (the font's own line). There is no Greek or Cyrillic yet, and no Latin beyond Extended-A as precomposed letters (Vietnamese, for one, is built from combining marks); text the fonts lack falls back to another font.
 
+Characters are drawn most frequent first, in the order in [`hanzi_order.tsv`](hanzi_order.tsv). `order.py` makes it from the Unicode Han Database ([Unihan](https://www.unicode.org/reports/tr38/), Unicode License v3), facts about characters only. It ranks by kHanyuPinlu, each character's count in the corpus of 《現代漢語頻率詞典》 (1.8 million characters). Each Simplified character's Traditional forms share its row: its kTraditionalVariant forms that are in the first plane of CNS 11643 (kIRG_TSource T1), Taiwan's common characters. The first 1,000 rows are 1,391 characters across both scripts, and cover 93% of the corpus.
+
 Chinese is being drawn a slice at a time (see the [milestones](https://github.com/zjlgdx/pinboard-fonts/milestones)). Until a character is drawn here, a terminal shows it in a system font. Releases 0.430 and 0.431 had a terminal build, Pinboard Typewriter NF CN, with Chinese and icons merged in from LXGW WenKai and Nerd Fonts; it is retired, so that everything in these fonts is drawn here.
 
 ## Use the fonts

@@ -116,14 +116,16 @@ def main():
                 adv[ch] = round(hmtx[name][0] / GRID, 1)
                 if ch == ' ':
                     continue
-                # Place the smooth outline where the font's own glyph sits.
+                # Place the smooth outline where the font's own glyph sits:
+                # spaced across, and lifted onto the baseline as the font is.
                 bp = BoundsPen(gs)
                 gs[name].draw(bp)
                 rec = coarse(style_key, ch, tmp)
                 cb = bounds(rec)
                 dx = (bp.bounds[0] + bp.bounds[2]) / 2 - (cb[0] + cb[2]) / 2
+                dy = (bp.bounds[1] + bp.bounds[3]) / 2 - (cb[1] + cb[3]) / 2
                 pen = CompactPen()
-                rec.replay(TransformPen(pen, (1, 0, 0, 1, dx, 0)))
+                rec.replay(TransformPen(pen, (1, 0, 0, 1, dx, dy)))
                 d[ch] = pen.d()
             kern, exact = {}, {}
             if 'GPOS' in font:

@@ -93,5 +93,8 @@ for path in sorted(OUT.glob('*.otf')):
     worst.sort(reverse=True)
     print(f'segments total {nodes}, most: {worst[:5]}; contour dirs {dirs}; tiny contours (<400 u²) {small}')
     if f['post'].isFixedPitch:
-        widths = {hm[n][0] for n in f.getGlyphOrder() if n != '.notdef'}
-        print('monospace advances:', widths)
+        # Combining marks (GDEF class 3) have no width in any font.
+        gdef = f['GDEF'].table.GlyphClassDef.classDefs if 'GDEF' in f else {}
+        widths = {hm[n][0] for n in f.getGlyphOrder() if n != '.notdef' and gdef.get(n) != 3}
+        marks = {hm[n][0] for n in f.getGlyphOrder() if gdef.get(n) == 3}
+        print('monospace advances:', widths, '| combining marks:', marks or '-')

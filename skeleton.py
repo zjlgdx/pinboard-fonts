@@ -177,6 +177,7 @@ TYPE_SERIFS = {
 
 # ---------------------------------------------------------------- helpers
 
+import math as _m
 import re as _re
 import unicodedata as _ud
 
@@ -279,44 +280,90 @@ MARK_SHAPES = {
     'dieresis':   ('M-76 -44 l2 8 M72 -44 l2 8', 'M-86 -34 l2 8 M82 -34 l2 8'),
     'ring':       (circle(0, -54, 50, 54), circle(0, -46, 52, 46)),
     'macron':     ('M-96 -40 L96 -40', 'M-110 -30 L110 -30'),
-    # Hangs from the foot of the letter, origin on the baseline.
+    'breve':      ('M-80 -96 C-70 28 70 28 80 -96', 'M-90 -72 C-80 22 80 22 90 -72'),
+    'dotaccent':  ('M-1 -44 l2 8', 'M-1 -34 l2 8'),
+    'hungarumlaut': ('M-30 -112 L-78 0 M78 -112 L30 0', 'M-30 -92 L-84 0 M86 -92 L32 0'),
+    # Latvian ģ: a comma turned over the letter, foot down.
+    'commaturned': ('M0 0 C-13 -30 -4 -68 26 -94',) * 2,
+    # Hang from the foot of the letter, origin on the baseline.
     'cedilla':    ('M2 -12 L-8 58 C58 50 88 88 66 124 C46 154 -14 156 -56 134',) * 2,
+    'ogonek':     ('M0 -6 C-36 40 -52 108 -2 126 C22 134 44 128 60 116',) * 2,
+    # Hangs clear under the letter, origin at its top: the comma's own curve.
+    'commabelow': ('M0 0 C13 30 4 68 -26 94',) * 2,
+    # Czech and Slovak ď ľ ť Ľ: an apostrophe beside the ascender, origin at its top.
+    'caronvert':  ('M0 0 C12 32 4 80 -24 120',) * 2,
 }
-COMBINING = {'̀': 'grave', '́': 'acute', '̂': 'circumflex', '̃': 'tilde',
-             '̈': 'dieresis', '̊': 'ring', '̌': 'caron', '̧': 'cedilla',
-             '̄': 'macron'}
+COMBINING = {'\u0300': 'grave', '\u0301': 'acute', '\u0302': 'circumflex', '\u0303': 'tilde',
+             '\u0304': 'macron', '\u0306': 'breve', '\u0307': 'dotaccent', '\u0308': 'dieresis',
+             '\u030A': 'ring', '\u030B': 'hungarumlaut', '\u030C': 'caron',
+             '\u0326': 'commabelow', '\u0327': 'cedilla', '\u0328': 'ogonek'}
+BELOW = {'cedilla', 'ogonek', 'commabelow'}
 
-# Latin-1 and Windows-1252 letters made of a letter and one mark.
+# Combining marks (zero width, placed by GPOS anchors) and the class each
+# attaches by. Over a capital, a mark above takes its flatter `.case` form.
+COMBINING_MARKS = {**COMBINING, '\u0312': 'commaturned'}
+ANCHOR = {name: ('bottom' if name == 'commabelow' else name if name in BELOW else 'top')
+          for name in COMBINING_MARKS.values()}
+STACK = 26      # skeleton units between two stacked marks
+
+
+def _accent(ch):
+    """(base letter, mark) for a letter made of one letter and one mark, as
+    each language writes it: Latvian and Romanian cedillas are commas, and
+    the caron beside an ascender is an apostrophe."""
+    d = _ud.normalize('NFD', ch)
+    if len(d) != 2 or d[1] not in COMBINING:
+        return None
+    base, mark = d[0], COMBINING[d[1]]
+    if mark == 'cedilla' and base in 'GKLNRgklnr':
+        mark = 'commaturned' if base == 'g' else 'commabelow'
+    if mark == 'caron' and base in 'dltL':
+        mark = 'caronvert'
+    return base, mark
+
+
+# Latin-1, Windows-1252 and Latin Extended-A letters made of a letter and one
+# mark, plus Romanian ș ț.
 ACCENTED = {}
-for _cp in list(range(0xC0, 0x100)) + [0x160, 0x161, 0x17D, 0x17E, 0x178]:
-    _d = _ud.normalize('NFD', chr(_cp))
-    if len(_d) == 2 and _d[1] in COMBINING:
-        ACCENTED[chr(_cp)] = (_d[0], COMBINING[_d[1]])
+for _cp in list(range(0xC0, 0x100)) + list(range(0x100, 0x180)) + [0x218, 0x219, 0x21A, 0x21B]:
+    _a = _accent(chr(_cp))
+    if _a:
+        ACCENTED[chr(_cp)] = _a
 
 # A mark over i or j sits on the dotless letter.
-DOTLESS = {'i': 'M200 260 L200 750'}
+DOTLESS = {'i': 'M200 260 L200 750', 'j': 'M260 260 L260 850 C255 960 140 980 80 910'}
 
-# Where a cedilla hangs: under the foot of the curve, not the middle of the box.
-CEDILLA_X = {'c': 270, 'C': 330}
+# Where a cedilla or ogonek hangs: under the foot of the curve or stem it
+# grows from, not the middle of the box.
+CEDILLA_X = {'c': 270, 'C': 330, 's': 240, 'S': 290, 't': 235, 'T': 290}
+OGONEK_X = {'a': 390, 'A': 512, 'e': 300, 'E': 410, 'i': 202, 'I': 250, 'u': 390, 'U': 372}
+
+# The stem an apostrophe caron stands beside.
+CARON_STEM = {'d': 390, 'l': 160, 't': 190, 'L': 110}
+
+# Marks over an ascender centre on its stem, not on the letter's body.
+MARK_X = {('h', 'circumflex'): 150, ('L', 'acute'): 190}
 
 # Spacing (legacy) accents: the same marks standing alone.
 SPACING_MARKS = {'¨': 'dieresis', '´': 'acute', '¯': 'macron', '¸': 'cedilla',
-                 'ˆ': 'circumflex', '˜': 'tilde'}
+                 'ˆ': 'circumflex', '˜': 'tilde', 'ˇ': 'caron', '˘': 'breve', '˙': 'dotaccent',
+                 '˚': 'ring', '˛': 'ogonek', '˝': 'hungarumlaut'}
 
 
-def mark_centre(base):
+def mark_centre(d, lower):
     """The x a mark centres on: the middle of the letter's own body (x-height
     or cap height), so tails and ascenders don't pull it sideways."""
-    d = DOTLESS.get(base, ALL[base])
-    lo, hi = (250, 750) if base.islower() else (50, 750)
-    xs = []
-    toks = _TOKEN.findall(d)
-    nums = [float(t) for t in toks if not t.isalpha()]
-    # Absolute coordinates only: skeleton letters use relative commands just for dots.
-    for x, y in zip(nums[0::2], nums[1::2]):
-        if lo - 1 <= y <= hi + 1 and abs(x) > 20:
-            xs.append(x)
+    lo, hi = (250, 750) if lower else (50, 750)
+    xs = [x for x, y in _points(d) if lo - 1 <= y <= hi + 1]
     return (min(xs) + max(xs)) / 2
+
+
+def _points(d):
+    """The absolute points of a skeleton path (letters use relative commands
+    only for dots, whose 2-unit step doesn't move anything)."""
+    d = _re.sub(r'l-?[\d.]+ -?[\d.]+', '', d)
+    nums = [float(t) for t in _TOKEN.findall(d) if not t.isalpha()]
+    return list(zip(nums[0::2], nums[1::2]))
 
 
 # ---------------------------------------------------------------- Latin-1 and Windows-1252
@@ -364,6 +411,18 @@ LATIN = {
          'C410 330 340 160 190 50 M190 170 L380 95',
     'þ': 'M110 40 L110 960 M110 500 C140 280 400 250 410 480 C420 740 160 790 112 640',
     'ı': DOTLESS['i'],
+    # What a lone combining mark is shown on.
+    '◌': ' '.join(f'M{250 + 210 * _m.sin(_m.pi * k / 5) - 1:.0f} {500 - 210 * _m.cos(_m.pi * k / 5) - 4:.0f} l2 8'
+                  for k in range(10)),
+    'ȷ': DOTLESS['j'],
+    # Latin Extended-A letters of their own
+    'ĸ': 'M110 260 L110 750 M370 270 L120 560 M210 470 L390 750',
+    'ŉ': "M80 50 C95 90 85 150 50 200 " + scale(LOWER['n'], 1, 0, 0, 90, 0),
+    'Ŋ': 'M110 750 L110 50 L480 750 L480 50 M480 750 L480 830 C476 930 392 956 322 916',
+    'ŋ': 'M110 260 L110 750 M110 460 C150 280 380 240 390 450 L390 850 C385 955 270 975 210 920',
+    'ſ': 'M330 70 C280 20 190 30 180 140 L180 750',
+    'Ĳ': UPPER['I'] + ' ' + scale(UPPER['J'], 1, 0, 0, 250, 0),
+    'ĳ': LOWER['i'] + ' ' + scale(LOWER['j'], 1, 0, 0, 170, 0),
     # Windows-1252
     '€': 'M480 160 C420 70 340 45 280 50 C150 60 100 240 100 400 C100 590 170 750 300 750 '
          'C380 750 440 710 480 650 M40 330 L380 330 M40 470 L360 470',
@@ -392,11 +451,32 @@ BUILT = {
     'Ø': ('O', 'M530 20 L90 785'),
     'ø': ('o', 'M445 225 L75 790'),
     '¢': ('c', 'M268 165 L252 835'),
+    'Đ': ('D', 'M30 400 L250 400'),
+    'đ': ('d', 'M290 140 L470 140'),
+    'Ħ': ('H', 'M40 215 L560 215'),
+    'ħ': ('h', 'M30 140 L250 140'),
+    'Ł': ('L', 'M30 480 L250 300'),
+    'ł': ('l', 'M70 480 L260 300'),
+    'Ŧ': ('T', 'M150 400 L430 400'),
+    'ŧ': ('t', 'M100 470 L290 470'),
+    'Ŀ': ('L', 'M300 395 l2 8'),
+    'ŀ': ('l', 'M330 445 l2 8'),
 }
+
+# Typewriter slabs for those letters, from the letters they grow from.
+TYPE_SERIFS.update({
+    'ı': TYPE_SERIFS['i'], 'ȷ': TYPE_SERIFS['j'], 'ſ': TYPE_SERIFS['f'],
+    'ĸ': 'M40 260 L110 260 M40 750 L180 750 M300 270 L440 270 M330 750 L450 750',
+    'ŉ': scale(TYPE_SERIFS['n'], 1, 0, 0, 90, 0),
+    'Ŋ': 'M40 50 L110 50 M40 750 L180 750 M410 50 L550 50',
+    'ŋ': 'M40 260 L110 260 M40 750 L180 750',
+    'Ĳ': scale(TYPE_SERIFS['J'], 1, 0, 0, 250, 0),
+    'ĳ': TYPE_SERIFS['i'] + ' ' + scale(TYPE_SERIFS['j'], 1, 0, 0, 170, 0),
+})
 
 # Pen weight per glyph, where a smaller drawing needs a finer line.
 LIGHTER = {c: 0.8 for c in '¹²³ª º¼½¾™'}
-LIGHTER.update({'©': 0.85, '®': 0.85})
+LIGHTER.update({'©': 0.85, '®': 0.85, '◌': 0.6})
 
 # ---------------------------------------------------------------- symbols
 
@@ -464,52 +544,126 @@ TERMINAL = {c: scale(d, 1.2, 300, 460) for c, d in TERMINAL.items()}
 LIGHTER.update({'❯': 1.55, '✔': 1.6, '✘': 1.6, '⏸': 1.5, '✢': 0.75, '✳': 0.85, '✶': 0.75, '✻': 0.7, '✽': 0.75})
 
 # Glyphs whose shape must not be stretched to fill the typewriter's cell.
-KEEP_SHAPE = set(SYMBOLS) | set(TERMINAL) | set('©®¤°•')
+KEEP_SHAPE = set(SYMBOLS) | set(TERMINAL) | set('©®¤°•◌') | set(COMBINING_MARKS)
 
 
 def charset(mono=False):
     """Every character a font draws with its pen, in order."""
     chars = list(ALL) + [c for c in LATIN if c not in ALL] + list(BUILT) + list(SPACING_MARKS) + list(ACCENTED)
-    chars += list(SYMBOLS)
+    chars += list(SYMBOLS) + list(COMBINING_MARKS)
     if mono:
         chars += list(TERMINAL)
     return chars
 
 
-def mark_path(name, base, reach, ring=50, hook=1.0, gap=None):
-    """A mark placed on `base` for a pen that inks `reach` units each side of
-    its centre line: a clear gap above the letter's overshoot, centred on its
-    body. A heavier or broader pen gets a larger ring (radius `ring`) and a
-    larger cedilla (`hook` times), so the eye and the curl stay open."""
-    lower = base.islower()
-    shape = MARK_SHAPES[name][0 if lower else 1]
+def mark_origin(name, base, reach, ring=50, hook=1.0, d=None):
+    """Where mark `name` goes on letter `base` for a pen that inks `reach`
+    units each side of its centre line: (shape, x, y, line). The shape is
+    drawn about (x, y); `line` is the height the placement is measured from
+    (the letter's top, or the baseline for a mark below), so a combining
+    mark's anchor and a letter's anchor meet at the same distance.
+
+    A mark above clears the letter's overshoot (or its ascender) by a gap and
+    centres on the letter's body. A heavier or broader pen gets a larger ring
+    (radius `ring`) and a larger cedilla and ogonek (`hook` times), so the eye
+    and the curl stay open."""
+    lower = base.islower() or base == '◌'
+    if d is None:
+        d = DOTLESS.get(base, ALL[base])
+    top = min(y for _x, y in _points(d))
+    # Over an ascender a mark takes the flatter capital form.
+    tall = not lower or top < 200
+    shape = MARK_SHAPES[name][1 if tall else 0]
+    x = MARK_X.get((base, name), mark_centre(d, lower))
+    if name in ('cedilla', 'ogonek'):
+        shape = scale(shape, hook, 0, 0)
+        x = (CEDILLA_X if name == 'cedilla' else OGONEK_X).get(base, x)
+        return shape, x, 748, 750
+    if name == 'commabelow':
+        return shape, x + 6, 750 + 12 + 2 * reach + 16, 750
+    if name == 'caronvert':
+        # Clear of the stem by the same gap a mark keeps above a letter.
+        y = 40 if lower else 50
+        return shape, CARON_STEM[base] + 2 * reach + 54, y, y
+    gap = 30 if tall else 40
     if name == 'ring':
         # Over a capital the ring is smaller and sits close to the apex.
         shape = scale(shape, ring / 50 * (1 if lower else 0.8), 0, 0)
-        gap = gap if gap is not None else (40 if lower else 18)
-    elif name == 'cedilla':
-        shape = scale(shape, hook, 0, 0)
-    if name == 'cedilla':
-        x = CEDILLA_X.get(base, mark_centre(base))
-        return transform(shape, lambda p: (p[0] + x, p[1] + 748))
-    x = mark_centre(base)
-    line = 250 if lower else 50
-    gap = (40 if lower else 30) if gap is None else gap
-    foot = line - 12 - 2 * reach - gap
-    return transform(shape, lambda p: (p[0] + x, p[1] + foot))
+        gap = 40 if lower else 18
+    line = top if lower and tall else (250 if lower else 50)
+    return shape, x, line - 12 - 2 * reach - gap, line
 
 
-def parts(ch, reach, mono=False, ring=50, hook=1.0):
+def mark_path(name, base, reach, ring=50, hook=1.0, d=None):
+    shape, x, y, _line = mark_origin(name, base, reach, ring, hook, d)
+    return transform(shape, lambda p: (p[0] + x, p[1] + y))
+
+
+def mark_parts(ch, reach, ring, hook, case):
+    name = COMBINING_MARKS[ch]
+    return [('mark', mark_path(name, 'H' if case else 'x', reach, ring, hook), 1.0)]
+
+
+def mark_anchors(ch, reach, ring=50, hook=1.0, case=False):
+    """A combining mark's own anchor (where it attaches), and for a mark
+    above, the anchor the next mark stacks on: {class: (x, y)}, {class: (x, y)}."""
+    name = COMBINING_MARKS[ch]
+    shape, x, y, line = mark_origin(name, 'H' if case else 'x', reach, ring, hook)
+    own = {ANCHOR[name]: (x, line)}
+    stack = {}
+    if ANCHOR[name] == 'top':
+        stack['top'] = (x, _stack_line(shape, y, reach, case))
+    return own, stack
+
+
+def _stack_line(shape, y, reach, upper):
+    """The `line` for the next mark above, so that it clears this one's top
+    by STACK units: its foot sits at line - 12 - 2*reach - gap, and its ink
+    a reach below that."""
+    top = min(py for _x, py in _points(shape)) + y
+    return top - STACK + 12 + (30 if upper else 40)
+
+
+def base_anchors(ch, reach, ring=50, hook=1.0):
+    """Where combining marks attach to a letter: {class: (x, y)}."""
+    if ch in ACCENTED:
+        base, own = ACCENTED[ch]
+        d = parts(ch, reach)[0][1]
+    elif ch in BUILT:
+        base, own = BUILT[ch][0], None
+        d = ALL[base]
+    else:
+        base, own = ch, None
+        d = ALL.get(ch) or LATIN.get(ch)
+    if d is None:
+        return {}
+    upper = not (base.islower() or base == '◌')
+    out = {}
+    for name, cls in (('circumflex', 'top'), ('commabelow', 'bottom'), ('cedilla', 'cedilla'), ('ogonek', 'ogonek')):
+        _s, x, _y, line = mark_origin(name, base, reach, ring, hook, d)
+        out[cls] = (x, line)
+    if own and own not in BELOW and own != 'caronvert':
+        # Over a mark already there: stack on it.
+        shape, x, y, _line = mark_origin(own, base, reach, ring, hook, d)
+        out['top'] = (x, _stack_line(shape, y, reach, upper))
+    return out
+
+
+def parts(ch, reach, mono=False, ring=50, hook=1.0, variant=0):
     """A glyph as pen strokes: [(role, path, weight)]. role is the character
     whose overshoot rules apply, or 'mark', 'serif', 'extra' or '' for
-    strokes that keep their place; weight scales the pen."""
+    strokes that keep their place; weight scales the pen. A combining mark's
+    variant 1 is its capital form."""
+    if ch in COMBINING_MARKS:
+        return mark_parts(ch, reach, ring, hook, variant == 1)
     if ch in ACCENTED:
         base, mark = ACCENTED[ch]
-        d = DOTLESS.get(base, ALL[base])
+        # A mark over i or j replaces its dot; one under it keeps it (į).
+        d = ALL[base] if mark in BELOW else DOTLESS.get(base, ALL[base])
         out = [(base, d, 1.0)]
         if mono and base in TYPE_SERIFS:
             out.append(('serif', TYPE_SERIFS[base], 1.0))
-        out.append(('mark', mark_path(mark, base, reach, ring, hook), 1.0))
+        out.append(('mark', mark_path(mark, base, reach, ring, hook, d), 1.0))
         return out
     if ch in SPACING_MARKS:
         return [('mark', mark_path(SPACING_MARKS[ch], 'x', reach, ring, hook), 1.0)]
@@ -531,9 +685,8 @@ def parts(ch, reach, mono=False, ring=50, hook=1.0):
         d = TERMINAL[ch]
     role = ch if _ud.category(ch) in ('Ll', 'Lu', 'Nd') else ''
     out = [(role, d, w)]
-    serif = TYPE_SERIFS.get(ch) or (TYPE_SERIFS['i'] if ch == 'ı' else None)
-    if mono and serif:
-        out.append(('serif', serif, 1.0))
+    if mono and ch in TYPE_SERIFS:
+        out.append(('serif', TYPE_SERIFS[ch], 1.0))
     return out
 
 

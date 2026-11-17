@@ -81,7 +81,7 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.490         # head.fontRevision; nameID 5 says the same
+VERSION = 0.500         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -937,6 +937,44 @@ def mark_features(glyphs, anchors):
     return fea
 
 
+# Full-width marks by where their ink sits in the em box. An opening mark's
+# left half is blank, a closing mark's right half; Taiwan centres the rest.
+# Mainland China sets those in the left half (the .zhs forms), so there they
+# count as right-blank too.
+CJK_OPEN = '「『（《〈'
+CJK_CLOSE = '」』）》〉'
+CJK_CENTRED = '。、，；：？！'
+
+
+def cjk_spacing(style, glyphs):
+    """chws and halt. chws (JLREQ, CLREQ): where two marks meet, one blank
+    half goes. halt: every mark half-width, on request. The blank side is
+    the side the ink isn't on. In the Typewriter half a mark is one cell, so
+    chws keeps the grid; the proportional families also take a quarter off a
+    centred mark's side that faces a bracket, as Taiwan sets them."""
+    have = lambda chars: [glyph_name(c) for c in chars if glyph_name(c) in glyphs]
+    opening, closing, centred = have(CJK_OPEN), have(CJK_CLOSE), have(CJK_CENTRED)
+    if not (opening and closing):
+        return []
+    half = glyphs[glyph_name('中')]['adv'] // 2
+    quarter = half // 2
+    left = [n + '.zhs' for n in centred if n + '.zhs' in glyphs]
+    fea = [f'@CJK_OPEN = [{" ".join(opening)}];', f'@CJK_CLOSE = [{" ".join(closing)}];',
+           f'@CJK_RIGHT_BLANK = [{" ".join(closing + left)}];', f'@CJK_CENTRED = [{" ".join(centred)}];',
+           'feature chws {',
+           f"  pos @CJK_RIGHT_BLANK' <0 0 -{half} 0> [@CJK_RIGHT_BLANK @CJK_OPEN];",
+           f"  pos @CJK_OPEN' <0 0 -{half} 0> @CJK_OPEN;"]
+    if not style.mono:
+        fea += [f"  pos @CJK_CENTRED' <0 0 -{quarter} 0> @CJK_OPEN;",
+                f"  pos @CJK_CLOSE' <0 0 -{quarter} 0> @CJK_CENTRED;"]
+    fea += ['} chws;', 'feature halt {',
+            f'  pos @CJK_OPEN <-{half} 0 -{half} 0>;',
+            f'  pos @CJK_RIGHT_BLANK <0 0 -{half} 0>;',
+            f'  pos @CJK_CENTRED <-{quarter} 0 -{half} 0>;',
+            '} halt;']
+    return fea
+
+
 def features(style, glyphs, pairs, anchors):
     """ccmp and mark positioning, calt alternates and kern, as feature-file
     text. An accented letter kerns in its base letter's class; where its
@@ -951,6 +989,7 @@ def features(style, glyphs, pairs, anchors):
         fea += ['feature locl {', '  script hani;', '  language ZHS exclude_dflt;']
         fea += [f'  sub {n[:-4]} by {n};' for n in zhs]
         fea += ['} locl;']
+    fea += cjk_spacing(style, glyphs)
     if style.alternates:
         lower = [g['ch'] for g in glyphs.values() if g['variant'] == 0 and kind(g['ch']) == 'lower'
                  and f'{glyph_name(g["ch"])}.alt1' in glyphs]

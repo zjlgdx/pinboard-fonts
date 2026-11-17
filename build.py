@@ -36,6 +36,9 @@ What follows the usual type-design rules (see README.md for sources):
     not with a pen, so they join across columns and rows
   - curves get points at their extremes; outer contours run
     counter-clockwise, as CFF expects
+  - flat strokes stand on the baseline: the skeleton's lines are the pen's
+    centre, so each font is lifted by how far its ink reaches below them,
+    and the x-height and cap height are the ink's own
   - vertical metrics follow the Google Fonts guide: typo metrics in use,
     a 1.24 em line, caps centred in it, win metrics at the font's bounds
   - hinted by AFDKO's otfautohint from alignment zones and stems measured
@@ -77,13 +80,13 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.410         # head.fontRevision; nameID 5 says the same
+VERSION = 0.420         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
 W, H = 1100, 1450       # bitmap size, in skeleton units
 K = 0.86                # skeleton unit -> font unit
-BASE = 750              # skeleton baseline
+BASE = 750              # skeleton baseline: where the pen's centre runs, not the ink's edge
 
 # Skeleton lines that round shapes overshoot, and by how much.
 LOWER_LINES = (40, 250, 750, 960)   # ascender, x-height, baseline, descender
@@ -571,6 +574,12 @@ def bounds(rec):
     return bp.bounds
 
 
+def moved(rec, dx=0, dy=0):
+    out = RecordingPen()
+    rec.replay(TransformPen(out, (1, 0, 0, 1, dx, dy)))
+    return out
+
+
 def ink_runs(rec, fixed, lo, hi, vertical=False, step=1.0):
     """Lengths of ink along a line: across x at height `fixed`, or (vertical)
     down y at x = `fixed`, between lo and hi."""
@@ -587,10 +596,13 @@ def ink_runs(rec, fixed, lo, hi, vertical=False, step=1.0):
     return runs
 
 
+# The letters whose flat feet stand on the baseline.
+FLAT_FEET = 'xzHEILTnmhu'
+
 # The zones a hinting rasteriser aligns, each measured from the ink: flat
 # letters give its edge, round ones its overshoot.
 ZONES = {
-    'baseline': ('xzHEILTnmhuvw', 'oceOCS03', 1),
+    'baseline': (FLAT_FEET + 'vw', 'oceOCS03', 1),
     'x-height': ('xzvwuyn', 'oces', 3),
     'cap': ('HEFTZ157', 'OCGQS0368', 3),
     'ascender': ('bdhkl', '', 3),
@@ -962,6 +974,18 @@ def make(style, shared=None):
                 if v == 0:
                     by_char[ch] = glyphs[name]
 
+    # The skeleton's baseline is the pen's centre line, so half of every flat
+    # stroke hangs below it. Lift the whole font by what its pen reaches below
+    # (the median foot of the flat letters, so one key struck low or a
+    # tapered stroke doesn't decide it): flat feet then stand on y=0, round
+    # ones overshoot below it, and the x-height and cap height are the ink's.
+    # Spacing and kerning are measured on the bitmaps, before the lift, so
+    # neither changes; GPOS anchors and the outlines take it.
+    feet = sorted(bounds(by_char[c]['rec'])[1] for c in FLAT_FEET)
+    lift = -round(feet[len(feet) // 2])
+    for g in glyphs.values():
+        g['rec'] = moved(g['rec'], 0, lift)
+
     # Measure the flat tops of x and H for the x-height and cap height.
     def top(ch):
         return bounds(by_char[ch]['rec'])[3]
@@ -982,10 +1006,13 @@ def make(style, shared=None):
             g['adv'] = style.advance
             g['dx'] = (style.advance - (xmax - xmin)) / 2 - xmin
     else:
-        depth = 0.15 * x_height
+        # The profiles' rows are the bitmap's, from before the lift, and so
+        # are the heights spacing reads, which keeps every advance as it was.
+        xh, caps = x_height - lift, cap_height - lift
+        depth = 0.15 * xh
         for g in glyphs.values():
             ch = g['ch']
-            zone = zone_for(ch, g['left'], x_height, cap_height)
+            zone = zone_for(ch, g['left'], xh, caps)
             target = style.lower_side if kind(ch) in ('lower', 'other') else style.upper_side
             wl, xl = side_white(g['left'], zone, depth, -1)
             wr, xr = side_white(g['right'], zone, depth, +1)
@@ -1037,7 +1064,7 @@ def make(style, shared=None):
         warp, _rng = style.warp(ch, v)
         def font_pt(p, g=g, warp=warp):
             x, y = warp(*p)
-            return round(x * K + g['dx']), round((BASE - y) * K)
+            return round(x * K + g['dx']), round((BASE - y) * K) + lift
         own, stack = style.anchors(ch, v)
         anchors[name] = ({c: font_pt(p) for c, p in own.items()}, {c: font_pt(p) for c, p in stack.items()})
 
@@ -1066,12 +1093,11 @@ def make(style, shared=None):
     y_min, y_max = 0, 0
     for name, g in glyphs.items():
         pen = T2CharStringPen(g['adv'], None)
-        moved = RecordingPen()
-        g['rec'].replay(TransformPen(moved, (1, 0, 0, 1, g['dx'], 0)))
+        placed = moved(g['rec'], g['dx'])
         # Cell glyphs are straight lines and exact quarter arcs already.
-        moved.replay(RoundingPen(pen) if g.get('cell') else ExtremaPen(RoundingPen(pen)))
+        placed.replay(RoundingPen(pen) if g.get('cell') else ExtremaPen(RoundingPen(pen)))
         charstrings[name] = pen.getCharString()
-        b = bounds(moved)
+        b = bounds(placed)
         metrics[name] = (g['adv'], math.floor(b[0]))
         y_min, y_max = min(y_min, b[1]), max(y_max, b[3])
         if g['variant'] == 0:
@@ -1138,7 +1164,7 @@ def make(style, shared=None):
     from fontTools.otlLib.maxContextCalc import maxCtxFont
     os2.usMaxContext = maxCtxFont(font)
     print(f'{family} {style.weight}: {len(order)} glyphs, {len(cmap)} characters, {len(pairs)} kerned character pairs, '
-          f'x-height {x_height}, cap height {cap_height}')
+          f'lifted {lift}, x-height {x_height}, cap height {cap_height}')
     return font, shared
 
 

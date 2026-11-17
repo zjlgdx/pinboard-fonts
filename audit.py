@@ -51,6 +51,8 @@ for path in sorted(OUT.glob('*.otf')):
     # overshoot: flat vs round letters
     def top(c): return glyph_info(gs, g(c))[0][3]
     def bot(c): return glyph_info(gs, g(c))[0][1]
+    feet = sorted(round(bot(c)) for c in 'xzHEILTnmhu')    # build.py's FLAT_FEET
+    print('baseline: flat feet', feet, 'median', feet[len(feet) // 2])
     print('baseline: flat x', round(bot('x')), 'z', round(bot('z')), 'H', round(bot('H')), '| round o', round(bot('o')), 'O', round(bot('O')), 's', round(bot('s')), 'c', round(bot('c')))
     print('x-height: flat x', round(top('x')), 'z', round(top('z')), 'v', round(top('v')), '| round o', round(top('o')), 'c', round(top('c')), 's', round(top('s')), 'n', round(top('n')))
     print('cap: flat H', round(top('H')), 'E', round(top('E')), 'T', round(top('T')), '| round O', round(top('O')), 'C', round(top('C')), 'S', round(top('S')), '| asc b', round(top('b')), 'd', round(top('d')), 'h', round(top('h')), 'l', round(top('l')), 'k', round(top('k')))

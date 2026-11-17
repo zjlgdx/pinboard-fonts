@@ -543,6 +543,28 @@ TERMINAL = {c: scale(d, 1.2, 300, 460) for c, d in TERMINAL.items()}
 # Pen weight for the heavy forms.
 LIGHTER.update({'❯': 1.55, '✔': 1.6, '✘': 1.6, '⏸': 1.5, '✢': 0.75, '✳': 0.85, '✶': 0.75, '✻': 0.7, '✽': 0.75})
 
+# The Typewriter's own forms of symbols that, drawn as in the proportional
+# fonts, came out small in a terminal cell. Arrows run nearly the cell's
+# width (← →) or the cap height (↑ ↓), with heads at 45°; © and ® are ovals
+# as tall as a capital, since a circle that fits the cell's width is far
+# shorter; ™ hangs from the cap height and fills the cell; ✗ covers what ✓
+# covers.
+MONO = {
+    '←': 'M580 460 L60 460 M260 260 L60 460 L260 660',
+    '→': 'M60 460 L580 460 M380 260 L580 460 L380 660',
+    '↑': 'M320 765 L320 35 M120 235 L320 35 L520 235',
+    '↓': 'M320 35 L320 765 M120 565 L320 765 L520 565',
+    '↔': 'M50 460 L590 460 M225 285 L50 460 L225 635 M415 285 L590 460 L415 635',
+    '↕': 'M320 20 L320 780 M150 190 L320 20 L490 190 M150 610 L320 780 L490 610',
+    '©': circle(320, 400, 265, 335) + ' ' + scale(UPPER['C'], 0.6, 295, 400, 25, 0),
+    '®': circle(320, 400, 265, 335) + ' ' + scale(UPPER['R'], 0.56, 295, 400, 25, 0),
+    '™': 'M30 50 L270 50 M150 50 L150 410 M330 410 L340 50 L450 330 L560 50 L570 410',
+    '✗': 'M100 170 C230 360 360 560 500 740 M500 160 C370 350 230 560 90 750',
+}
+MONO['✘'] = MONO['✗']
+# ...and a heavier pen for them, so they don't read as letters (✗ as x).
+MONO_WEIGHT = {c: 1.2 for c in '←→↑↓↔↕✓✗'}
+
 # Glyphs whose shape must not be stretched to fill the typewriter's cell.
 KEEP_SHAPE = set(SYMBOLS) | set(TERMINAL) | set('©®¤°•◌') | set(COMBINING_MARKS)
 
@@ -674,8 +696,10 @@ def parts(ch, reach, mono=False, ring=50, hook=1.0, variant=0):
         if mono and base in TYPE_SERIFS:
             out.append(('serif', TYPE_SERIFS[base], 1.0))
         return out
-    w = LIGHTER.get(ch, 1.0)
-    if ch in ALL:
+    w = MONO_WEIGHT.get(ch, LIGHTER.get(ch, 1.0)) if mono else LIGHTER.get(ch, 1.0)
+    if mono and ch in MONO:
+        d = MONO[ch]
+    elif ch in ALL:
         d = ALL[ch]
     elif ch in LATIN:
         d = LATIN[ch]

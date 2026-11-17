@@ -4,6 +4,7 @@ numpy==2.5.5
 pillow==13.0.0
 booleanOperations==0.10.0
 cffsubr==0.4.0
+afdko==5.0.1        # otfautohint
 # for the checks in the README
 fontbakery==1.1.0
 uharfbuzz==0.57.0

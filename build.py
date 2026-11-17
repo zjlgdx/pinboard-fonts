@@ -2,10 +2,13 @@
 
 Each glyph's centre line is written with a pen on a large bitmap, traced
 back to curves with potrace, spaced from its own shape, kerned, and
-assembled into an OpenType (CFF) font and a WOFF2 copy in out/.
+assembled into an OpenType (CFF) font and a WOFF2 copy in out/. Each
+family comes in Regular and Bold: the Bold is the same skeletons written
+with a wider pen (and, for the handwriting, a little wider), then spaced
+and kerned afresh.
 
     .venv/bin/python build.py            # all fonts
-    .venv/bin/python build.py marker     # one font
+    .venv/bin/python build.py marker     # one family, both weights
 
 The pens:
   ballpoint  a fine round pen leaning 9 degrees, with light pressure changes
@@ -23,6 +26,11 @@ What follows the usual type-design rules (see README.md for sources):
   - kerning is measured from the same profiles for every letter pair
   - the two handwriting fonts carry two alternates of each lowercase letter
     and cycle them (`calt`), so a double letter is never drawn twice alike
+  - an accented letter is its base letter's drawing plus a mark, placed
+    clear of the letter for the pen in use; it keeps the base's spacing
+    and kerning class, with its own pair wherever the accent would collide
+  - the typewriter's box drawing and block elements are made to the cell,
+    not with a pen, so they join across columns and rows
   - curves get points at their extremes; outer contours run
     counter-clockwise, as CFF expects
   - vertical metrics follow the Google Fonts guide: typo metrics in use,
@@ -32,6 +40,7 @@ What follows the usual type-design rules (see README.md for sources):
 import math
 import random
 import re
+import unicodedata
 import subprocess
 import sys
 import tempfile
@@ -52,16 +61,17 @@ from fontTools.pens.transformPen import TransformPen
 from fontTools.svgLib.path import parse_path
 from fontTools.ttLib import TTFont
 
-from skeleton import ALL, TYPE_SERIFS
+import cells
+from skeleton import ACCENTED, ALL, KEEP_SHAPE, base_of, charset, parts
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.200         # head.fontRevision; nameID 5 says the same
+VERSION = 0.300         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
-X0, Y0 = -200, -100     # bitmap origin, in skeleton units
-W, H = 1100, 1250       # bitmap size, in skeleton units
+X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
+W, H = 1100, 1450       # bitmap size, in skeleton units
 K = 0.86                # skeleton unit -> font unit
 BASE = 750              # skeleton baseline
 
@@ -76,12 +86,13 @@ LINE = 1240
 
 # ---------------------------------------------------------------- paths
 
-TOKEN = re.compile(r'[MLCZmlcz]|-?(?:\d+\.?\d*|\.\d+)')
+TOKEN = re.compile(r'[MLCZFmlczf]|-?(?:\d+\.?\d*|\.\d+)')
 
 
 def subpaths(d):
     """Flatten an SVG path (M L C Z, absolute or relative) into polylines of
-    (x, y, on_curve) points; on_curve marks points sampled from a curve."""
+    (x, y, on_curve) points; on_curve marks points sampled from a curve.
+    F closes a path like Z and also fills it (closed == 'fill')."""
     toks = TOKEN.findall(d)
     out, pts, closed = [], None, False
     i, cmd = 0, None
@@ -100,10 +111,10 @@ def subpaths(d):
         if toks[i].isalpha():
             cmd = toks[i]
             i += 1
-            if cmd in 'Zz':
+            if cmd in 'ZzFf':
                 if pts:
                     pts.append((sx, sy, pts[0][2]))
-                closed = True
+                closed = 'fill' if cmd in 'Ff' else True
                 flush()
                 pts, closed = None, False
                 cx, cy = sx, sy
@@ -145,11 +156,19 @@ def subpaths(d):
     return out
 
 
+def kind(ch):
+    """'lower', 'upper', 'figure' or 'other', from the Unicode category (so
+    a superior ª, which Python calls lowercase, is spaced as a mark)."""
+    cat = unicodedata.category(ch) if len(ch) == 1 else ''
+    return {'Ll': 'lower', 'Lu': 'upper', 'Nd': 'figure'}.get(cat, 'other')
+
+
 def overshoot(ch):
     """Push the round parts of a letter or figure past the lines they meet."""
-    if ch.islower():
+    k = kind(ch)
+    if k == 'lower':
         lines = LOWER_LINES
-    elif ch.isupper() or ch.isdigit():
+    elif k in ('upper', 'figure'):
         lines = UPPER_LINES
     else:
         return lambda x, y, curved: (x, y)
@@ -188,14 +207,23 @@ def resample(pts, step):
     return res, total
 
 
-def prepare(ch, d, step, warp):
+def prepare(ch, d, step, warp, weight=1.0):
     strokes = []
     push = overshoot(ch)
     for pts, closed in subpaths(d):
         pts = [warp(*push(x, y, c)) for x, y, c in pts]
         res, length = resample(pts, step)
-        strokes.append((res, closed, length))
+        strokes.append((res, closed, length, weight))
     return strokes
+
+
+def skeleton_points(d):
+    return [(x, y) for pts, _ in subpaths(d) for x, y, _c in pts]
+
+
+def centre_x(d):
+    xs = [x for x, _ in skeleton_points(d)]
+    return (min(xs) + max(xs)) / 2
 
 
 # ---------------------------------------------------------------- pens
@@ -204,11 +232,18 @@ def px(x, y):
     return (x - X0) * S, (y - Y0) * S
 
 
+def fill(draw, pts):
+    """Ink inside a closed stroke marked F (a solid dot, square or arrowhead)."""
+    draw.polygon([px(x, y) for x, y, _t in pts], fill=255)
+
+
 def round_pen(draw, strokes, radius, taper=0.0, dot=1.25, flat=0.93):
     """A round pen, slightly flatter than round: horizontal strokes come
     out a few percent lighter than vertical ones, which reads as even."""
-    for pts, closed, length in strokes:
-        r0 = radius * (dot if length < 30 else 1.0)
+    for pts, closed, length, weight in strokes:
+        if closed == 'fill':
+            fill(draw, pts)
+        r0 = radius * weight * (dot if length < 30 else 1.0)
         for x, y, t in pts:
             # Ink is lighter where the pen lands and lifts.
             f = 1.0 if closed else 1 - taper * (1 - math.sin(math.pi * t)) ** 2
@@ -231,10 +266,12 @@ def nib_pen(draw, strokes, half_w, half_t, angle):
         sx = math.copysign(abs(c) ** e, c) * half_w
         sy = math.copysign(abs(s) ** e, s) * half_t
         shape.append((u[0] * sx + v[0] * sy, u[1] * sx + v[1] * sy))
-    for pts, _closed, _length in strokes:
+    for pts, closed, _length, weight in strokes:
+        if closed == 'fill':
+            fill(draw, pts)
         for x, y, _t in pts:
             cx, cy = px(x, y)
-            draw.polygon([(cx + dx * S, cy + dy * S) for dx, dy in shape], fill=255)
+            draw.polygon([(cx + dx * S * weight, cy + dy * S * weight) for dx, dy in shape], fill=255)
 
 
 # ---------------------------------------------------------------- styles
@@ -251,73 +288,132 @@ def noise(rng, shape, cells):
     return (a - a.mean()) / (a.std() + 1e-6)
 
 
-class Ballpoint:
-    family = 'Pinboard Ballpoint'
+class Style:
+    """What every pen shares: the glyph's strokes from its skeleton parts,
+    and a Bold made by a wider pen on the same skeleton."""
     mono = False
+    widen = 1.0
+
+    def __init__(self, bold=False):
+        self.bold = bold
+        self.weight = 'Bold' if bold else 'Regular'
+
+    def strokes(self, ch, step, warp):
+        out = []
+        for role, d, w in parts(ch, self.reach, self.mono, self.ring, self.hook):
+            out += prepare(role, self.ink_dots(d), step, warp, w)
+        return out
+
+    def ink_dots(self, d):
+        return d
+
+    def widen_about(self, ch):
+        """A bold pen fills the counters, so a Bold letter is drawn a little
+        wider about its own centre (the base letter's, for an accented one)."""
+        if self.widen == 1.0:
+            return lambda x: x
+        cx = centre_x(parts(ch, self.reach, self.mono, self.ring, self.hook)[0][1])
+        return lambda x: cx + (x - cx) * self.widen
+
+
+class Ballpoint(Style):
+    family = 'Pinboard Ballpoint'
     alternates = 2
     # Degrees of lean, part of the handwriting as in other script fonts: the
     # font stays a Regular with post.italicAngle 0, but is spaced upright.
     lean = 9
     space = 250
-    # A straight lowercase stem's sidebearing: about a third of n's counter.
-    lower_side = 64
-    upper_side = 80
     panose = (3, 0, 0, 0, 0, 0, 0, 0, 0, 0)     # Latin hand written
     speck = 24
     smooth = (3.0, '1.2')       # blur in pixels before tracing, potrace -O
 
+    def __init__(self, bold=False):
+        super().__init__(bold)
+        # A straight lowercase stem's sidebearing: about a third of n's counter.
+        self.radius = 44 if bold else 27
+        self.lower_side, self.upper_side = (70, 88) if bold else (64, 80)
+        self.widen = 1.08 if bold else 1.0
+        self.reach = self.radius * 0.93         # how far ink reaches up and down from the line
+        # A ring's radius and a cedilla's size: their eye and curl stay open under a heavier pen.
+        self.ring, self.hook = (76, 1.3) if bold else (50, 1.0)
+
     def draw(self, ch, img, variant=0):
-        rng = random.Random(seed_for('ballpoint', ch + '#' * variant))
+        rng = random.Random(seed_for('ballpoint', base_of(ch) + '#' * variant))
         # Each letter leans, sits and sizes a little differently, kept small
         # enough that no one letter jumps out of a word.
         k = math.tan(math.radians(self.lean + rng.uniform(-1.5, 1.5)))
         dy = rng.uniform(-3, 3)
         sz = rng.uniform(0.99, 1.01)
         ax, ay = rng.uniform(0, 6), rng.uniform(0, 6)
+        wide = self.widen_about(ch)
 
         def warp(x, y):
+            x = wide(x)
             x += 8 * math.sin(y * 0.012 + ax)
             y += 3 * math.sin(x * 0.010 + ay)
             y = BASE + (y - BASE) * sz + dy
             return x + (BASE - y) * k, y
 
-        strokes = prepare(ch, ALL[ch], 1.0, warp)
-        round_pen(ImageDraw.Draw(img), strokes, radius=27, taper=0.15)
+        round_pen(ImageDraw.Draw(img), self.strokes(ch, 1.0, warp), radius=self.radius, taper=0.15)
         return img
 
 
-class Marker:
+class Marker(Style):
     family = 'Pinboard Marker'
-    mono = False
     alternates = 2
     lean = 0
     space = 270
-    lower_side = 56
-    upper_side = 70
     panose = (3, 0, 0, 0, 0, 0, 0, 0, 0, 0)
     speck = 24
     smooth = (2.5, '1.2')
 
+    def __init__(self, bold=False):
+        super().__init__(bold)
+        self.half_w, self.half_t = (78, 20) if bold else (56, 13)
+        self.lower_side, self.upper_side = (62, 76) if bold else (56, 70)
+        self.widen = 1.08 if bold else 1.0
+        a = math.radians(35)
+        self.reach = self.half_w * math.sin(a) + self.half_t * math.cos(a)
+        self.ring, self.hook = (86, 1.15) if bold else (72, 1.0)     # the nib is broad
+
+    def ink_dots(self, d):
+        # A chisel dot is a short dab, not a touch.
+        return d.replace('l2 8', 'l16 26')
+
+    def strokes(self, ch, step, warp):
+        out = []
+        for role, d, w in parts(ch, self.reach, self.mono, self.ring, self.hook):
+            if role == 'mark' and 'l2 8' in d:
+                # Two nib-shaped dabs side by side read as a double acute (ű):
+                # an accent's dots are finer and pulled square across the nib.
+                out += prepare(role, d.replace('l2 8', 'l26 38'), step, warp, w * 0.72)
+            else:
+                out += prepare(role, self.ink_dots(d), step, warp, w)
+        return out
+
     def draw(self, ch, img, variant=0):
-        rng = random.Random(seed_for('marker', ch + '#' * variant))
+        rng = random.Random(seed_for('marker', base_of(ch) + '#' * variant))
         ax = rng.uniform(0, 6)
         dy = rng.uniform(-3, 3)
         rot = math.radians(rng.uniform(-0.8, 0.8))
         cr, sr = math.cos(rot), math.sin(rot)
+        wide = self.widen_about(ch)
 
         def warp(x, y):
+            x = wide(x)
             x += 4 * math.sin(y * 0.01 + ax)
             x, y = x - 300, y - 450
             x, y = x * cr - y * sr, x * sr + y * cr
             return x + 300, y + 450 + dy
 
-        # A chisel dot is a short dab, not a touch.
-        strokes = prepare(ch, ALL[ch].replace('l2 8', 'l16 26'), 1.0, warp)
-        nib_pen(ImageDraw.Draw(img), strokes, half_w=56, half_t=13, angle=35)
+        nib_pen(ImageDraw.Draw(img), self.strokes(ch, 1.0, warp), half_w=self.half_w, half_t=self.half_t, angle=35)
         return img
 
 
-class Typewriter:
+SERIF = re.compile(r'M(-?[\d.]+) (-?[\d.]+) L(-?[\d.]+) (-?[\d.]+)')
+
+
+class Typewriter(Style):
     family = 'Pinboard Typewriter'
     mono = True
     alternates = 0
@@ -330,16 +426,43 @@ class Typewriter:
     speck = 2200
     smooth = (1.2, '0.8')
 
+    def __init__(self, bold=False):
+        super().__init__(bold)
+        self.radius = 56 if bold else 36
+        self.dot = 1.35 if bold else 1.6
+        self.reach = self.radius * 0.93
+        self.ring, self.hook = (78, 1.25) if bold else (54, 1.0)
+
+    def serifs(self, d):
+        """A heavier slab would close the gaps between m's feet: in Bold
+        each serif gives back a little at both ends."""
+        if not self.bold:
+            return d
+        def shorter(m):
+            x0, y0, x1, y1 = map(float, m.groups())
+            n = math.hypot(x1 - x0, y1 - y0)
+            t = min(25, n * 0.3) / n
+            return (f'M{x0 + (x1 - x0) * t:.1f} {y0 + (y1 - y0) * t:.1f} '
+                    f'L{x1 - (x1 - x0) * t:.1f} {y1 - (y1 - y0) * t:.1f}')
+        return SERIF.sub(shorter, d)
+
     def draw(self, ch, img, variant=0):
-        rng = random.Random(seed_for('typewriter', ch))
-        d = ALL[ch] + ' ' + TYPE_SERIFS.get(ch, '')
-        raw = [p for pts, _ in subpaths(d) for p in pts]
+        rng = random.Random(seed_for('typewriter', base_of(ch)))
+        ps = [(role, self.serifs(d) if role == 'serif' else d, w) for role, d, w in parts(ch, self.reach, True, self.ring, self.hook)]
+        # An accent doesn't change how its letter fills the cell.
+        body = [d for role, d, _w in ps if role != 'mark'] or [d for _r, d, _w in ps]
+        raw = [p for d in body for p in skeleton_points(d)]
         lo = min(p[0] for p in raw)
         hi = max(p[0] for p in raw)
         mid = (lo + hi) / 2
-        room = self.advance / K - 160          # the cell, less the pen and a gap
-        # Typewriter letters fill their cell: narrow ones widen, wide ones squeeze.
-        sq = min(1.45 if hi - lo > 150 else 1.0, room / max(hi - lo, 1))
+        room = self.advance / K - 160 - 2 * (self.radius - 36)   # the cell, less the pen and a gap
+        if ch in KEEP_SHAPE:
+            # Symbols keep their proportions: shrink both ways if too wide.
+            sq = sy = min(1.0, room / max(hi - lo, 1))
+        else:
+            # Typewriter letters fill their cell: narrow ones widen, wide ones squeeze.
+            sq = min(1.45 if hi - lo > 150 else 1.0, room / max(hi - lo, 1))
+            sy = 1.0
         # Each key strikes a little off: a touch high or low, a hair rotated.
         dy = rng.uniform(-10, 10)
         rot = math.radians(rng.uniform(-1.1, 1.1))
@@ -347,12 +470,15 @@ class Typewriter:
 
         def warp(x, y):
             x = mid + (x - mid) * sq
+            y = 460 + (y - 460) * sy
             x, y = x - mid, y - 400
             x, y = x * cr - y * sr, x * sr + y * cr
             return x + mid, y + 400 + dy
 
-        strokes = prepare(ch, d, 2.0, warp)
-        round_pen(ImageDraw.Draw(img), strokes, radius=36, dot=1.6)
+        strokes = []
+        for role, d, w in ps:
+            strokes += prepare(role, d, 2.0, warp, w)
+        round_pen(ImageDraw.Draw(img), strokes, radius=self.radius, dot=self.dot)
         return self.ink(img, rng)
 
     def ink(self, img, rng):
@@ -409,6 +535,17 @@ def bounds(rec):
     return bp.bounds
 
 
+def without_specks(rec, least=450):
+    """Drop contours under `least` square font units (the 400 floor, with
+    room for rounding): a counter a heavy pen has all but closed, or a speck
+    of ribbon. Neither shows at text sizes, and each costs outline points."""
+    out = RecordingPen()
+    for c in cells.contours(rec):
+        if abs(cells.area(c)) >= least:
+            out.value += c
+    return out
+
+
 class ExtremaPen(BasePen):
     """Splits each cubic at its horizontal and vertical extremes, so every
     curve spans at most a quarter turn and has points where rasterisers and
@@ -452,7 +589,7 @@ class ExtremaPen(BasePen):
 
 # ---------------------------------------------------------------- spacing
 
-ROWS = np.arange(-320, 820, 8)      # font-unit rows the profiles sample
+ROWS = np.arange(-360, 1000, 8)     # font-unit rows the profiles sample, accents included
 
 
 def profile(img, slant):
@@ -476,9 +613,10 @@ def profile(img, slant):
 def zone_for(ch, left, x_height, cap_height):
     """The rows a letter is spaced over: x-height for lowercase, cap height
     for capitals and figures, a mark's own height for marks."""
-    if ch.islower():
+    k = kind(ch)
+    if k == 'lower':
         return (ROWS >= 0) & (ROWS <= x_height)
-    if ch.isupper() or ch.isdigit():
+    if k in ('upper', 'figure'):
         return (ROWS >= 0) & (ROWS <= cap_height)
     ink = ~np.isnan(left)
     return ink if ink.any() else (ROWS >= 0) & (ROWS <= x_height)
@@ -514,6 +652,10 @@ def notdef(width):
     return pen.getCharString()
 
 
+KERNED_MARKS = '.,:;\'"‘’“”-–—()?!/&«»‹›‚„¿¡'
+TOUCH = 12      # font units: the least white two kerned shapes keep between them, on any row
+
+
 def kerning(glyphs, strength=0.55, floor=80):
     """Pair adjustments where two shapes leave a hole or can tuck together:
     on the rows where both letters have ink inside both spacing zones (so an
@@ -521,8 +663,12 @@ def kerning(glyphs, strength=0.55, floor=80):
     compared with the gap their spacing sidebearings give (two straight
     stems meet at exactly that; tails and hooks outside the spacing zone,
     like j's, don't count). A hole wider than that (T o, L T, P ., r ., " A)
-    is closed by half its excess; pairs that already meet are left alone."""
-    kernable = [c for c in glyphs if c.isalnum() or c in '.,:;\'"\u2018\u2019\u201c\u201d-\u2013\u2014()?!/&']
+    is closed by half its excess; pairs that already meet are left alone.
+
+    Then, over every row both shapes ink (accents, tails, hooks), no pair may
+    come closer than TOUCH: an accent tucked under a T is kerned less, and an
+    f's hook that would hit a quote or an accent is pushed apart."""
+    kernable = [c for c in glyphs if c.isalnum() or c in KERNED_MARKS]
     pairs = {}
     for a in kernable:
         ga = glyphs[a]
@@ -530,40 +676,98 @@ def kerning(glyphs, strength=0.55, floor=80):
         for b in kernable:
             gb = glyphs[b]
             lb = gb['left']                         # white left of b, per row
-            both = ~np.isnan(ra) & ~np.isnan(lb) & ga['zone'] & gb['zone']
-            if both.sum() < 3:
-                continue
-            closest = float((ra + lb)[both].min())
-            usual = ga['zsbR'] + gb['zsbL']
-            excess = closest - usual
-            # Over a short shared band (a period beside an o) every round
-            # shape looks like a hole; ask for a deeper one before kerning.
-            short = both.sum() * 8 < 0.33 * 430
-            if excess < (floor * 1.75 if short else floor):
-                continue
-            k = -int(round(excess * strength / 5) * 5)
-            # Between two lowercase letters a hole is never as deep as under
-            # a T or after an r before a period, so keep those pairs gentle.
-            pairs[(a, b)] = max(-40 if a.islower() and b.islower() else -160, k)
+            inked = ~np.isnan(ra) & ~np.isnan(lb)
+            both = inked & ga['zone'] & gb['zone']
+            k = 0
+            if both.sum() >= 3:
+                closest = float((ra + lb)[both].min())
+                usual = ga['zsbR'] + gb['zsbL']
+                excess = closest - usual
+                # Over a short shared band (a period beside an o) every round
+                # shape looks like a hole; ask for a deeper one before kerning.
+                short = both.sum() * 8 < 0.33 * 430
+                if excess >= (floor * 1.75 if short else floor):
+                    k = -int(round(excess * strength / 5) * 5)
+                    # Between two lowercase letters a hole is never as deep as under
+                    # a T or after an r before a period, so keep those pairs gentle.
+                    lower = kind(a) == 'lower' and kind(b) == 'lower'
+                    k = max(-40 if lower else -160, k)
+            if inked.any():
+                nearest = float((ra + lb)[inked].min()) + k
+                if nearest < TOUCH:
+                    k += int(math.ceil((TOUCH - nearest) / 5) * 5)
+            if k:
+                pairs[(a, b)] = k
     return pairs
 
 
-def build(key):
-    style = STYLES[key]()
+def features(style, glyphs, pairs):
+    """calt alternates and kern, as feature-file text. An accented letter
+    kerns in its base letter's class; where its accent changes the answer
+    (an accent under a T's bar), a glyph pair says so first."""
+    fea = ['languagesystem DFLT dflt;', 'languagesystem latn dflt;']
+    if style.alternates:
+        lower = [g['ch'] for g in glyphs.values() if g['variant'] == 0 and kind(g['ch']) == 'lower'
+                 and f'{glyph_name(g["ch"])}.alt1' in glyphs]
+        lower = [glyph_name(c) for c in sorted(lower, key=ord)]
+        fea += [f'@cycle0 = [{" ".join(lower)}];']
+        for v in range(1, style.alternates + 1):
+            fea += [f'@cycle{v} = [{" ".join(n + f".alt{v}" for n in lower)}];',
+                    f'lookup to_alt{v} {{ sub @cycle0 by @cycle{v}; }} to_alt{v};']
+        # Each lowercase letter after another takes the next drawing in turn:
+        # "book" is written o, o.alt1 -- never the same o twice in a row.
+        rules = [f"  sub @cycle{v} @cycle0' lookup to_alt{v + 1};" for v in range(style.alternates - 1, 0, -1)]
+        rules.append("  sub @cycle0 @cycle0' lookup to_alt1;")
+        fea += ['feature calt {'] + rules + ['} calt;']
+    if pairs:
+        variants = {}
+        for name, g in glyphs.items():
+            variants.setdefault(g['ch'], []).append(name)
+        cls = {c: list(v) for c, v in variants.items() if c not in ACCENTED}
+        for c in variants:
+            if c in ACCENTED and ACCENTED[c][0] in cls:
+                cls[ACCENTED[c][0]] += variants[c]
+        group = lambda c: ACCENTED[c][0] if c in ACCENTED else c
+        chars = sorted({c for ab in pairs for c in ab} | {c for c in variants if c in ACCENTED}, key=ord)
+        lines, exceptions = [], []
+        for (a, b), k in sorted(pairs.items()):
+            if a not in ACCENTED and b not in ACCENTED:
+                lines.append(f'  pos [{" ".join(cls[a])}] [{" ".join(cls[b])}] {k};')
+        # Accented letters: wherever their own value differs from their class's.
+        kernable = [c for c in chars if c in variants]
+        for a in kernable:
+            for b in kernable:
+                if a not in ACCENTED and b not in ACCENTED:
+                    continue
+                own = pairs.get((a, b), 0)
+                if own != pairs.get((group(a), group(b)), 0):
+                    for na in variants[a]:
+                        for nb in variants[b]:
+                            exceptions.append(f'  pos {na} {nb} {own};')
+        fea += ['feature kern {'] + exceptions + lines + ['} kern;']
+    return '\n'.join(fea)
+
+
+def make(style, shared=None):
+    """One font of a family. `shared` carries the Regular's vertical metrics,
+    so both weights set lines alike."""
     family = style.family
-    ps = family.replace(' ', '') + '-Regular'
+    ps = family.replace(' ', '') + '-' + style.weight
     slant = math.tan(math.radians(style.lean))
 
     glyphs = {}          # name -> dict(rec, adv, left, right, ...)
     by_char = {}         # char -> its default glyph's entry
     with tempfile.TemporaryDirectory() as t:
         tmp = Path(t)
-        for ch in ALL:
-            variants = style.alternates if ch.islower() else 0
+        for ch in charset(style.mono):
+            variants = style.alternates if kind(ch) == 'lower' else 0
             for v in range(variants + 1):
                 img = Image.new('L', (int(W * S), int(H * S)), 0)
                 img = style.draw(ch, img, v)
-                rec = trace(img, tmp, style.speck, style.smooth)
+                edge = np.asarray(img)
+                if edge[:2].any() or edge[-2:].any() or edge[:, :2].any() or edge[:, -2:].any():
+                    print(f'  {ch!r}: ink reaches the edge of the canvas, and is cut off')
+                rec = without_specks(trace(img, tmp, style.speck, style.smooth))
                 if bounds(rec) is None:
                     print(f'  {ch!r}: empty, skipped')
                     continue
@@ -578,6 +782,14 @@ def build(key):
         return bounds(by_char[ch]['rec'])[3]
     x_height = round(top('x') if not slant else top('z'))
     cap_height = round(top('H'))
+    if shared is None:
+        typo_asc = round((LINE + cap_height) / 2)
+        shared = {'asc': typo_asc, 'desc': typo_asc - LINE}
+    TYPO_ASC, TYPO_DESC = shared['asc'], shared['desc']
+
+    def base_glyph(g):
+        name = glyph_name(ACCENTED[g['ch']][0]) + (f'.alt{g["variant"]}' if g['variant'] else '')
+        return glyphs[name]
 
     if style.mono:
         for g in glyphs.values():
@@ -589,7 +801,7 @@ def build(key):
         for g in glyphs.values():
             ch = g['ch']
             zone = zone_for(ch, g['left'], x_height, cap_height)
-            target = style.lower_side if (ch.islower() or not ch.isalnum()) else style.upper_side
+            target = style.lower_side if kind(ch) in ('lower', 'other') else style.upper_side
             wl, xl = side_white(g['left'], zone, depth, -1)
             wr, xr = side_white(g['right'], zone, depth, +1)
             # Straight sides keep the full space; round and open ones give
@@ -601,7 +813,7 @@ def build(key):
             g['adv'] = round(xr - xl + sbl + sbr)
             g['zsbL'], g['zsbR'], g['zone'] = sbl, sbr, zone
         # Math signs share one width, centred, so sums line up.
-        math_signs = [g for g in glyphs.values() if g['ch'] in '+=<>\u00d7~-']
+        math_signs = [g for g in glyphs.values() if g['ch'] in '+=<>×~-¬±÷−≠≤≥≈']
         cell = max(g['adv'] for g in math_signs if g['ch'] != '-')
         for g in math_signs:
             if g['ch'] == '-':
@@ -609,11 +821,24 @@ def build(key):
             xmin, _, xmax, _ = bounds(g['rec'])
             g['dx'] = (cell - (xmax - xmin)) / 2 - xmin
             g['adv'] = cell
+    # An accented letter is its base letter plus a mark: same place, same width.
+    for g in glyphs.values():
+        if g['ch'] in ACCENTED:
+            b = base_glyph(g)
+            for k in ('dx', 'adv', 'zsbL', 'zsbR', 'zone'):
+                if k in b:
+                    g[k] = b[k]
     for g in glyphs.values():
         g['left'] = g['left'] + g['dx']
         g['right'] = g['right'] + g['dx']
-        g['sbL'] = np.nanmin(g['left']) if not np.all(np.isnan(g['left'])) else 0
-        g['sbR'] = g['adv'] - (np.nanmax(g['right']) if not np.all(np.isnan(g['right'])) else g['adv'])
+
+    # Box drawing and blocks, made to the cell (typewriter only).
+    if style.mono:
+        light = round(2 * style.radius * K / 2) * 2
+        for ch, rec in cells.glyphs(style.advance, TYPO_ASC, TYPO_DESC, light).items():
+            nan = np.full(ROWS.shape, np.nan)
+            glyphs[glyph_name(ch)] = {'ch': ch, 'rec': rec, 'left': nan, 'right': nan, 'variant': 0,
+                                      'adv': style.advance, 'dx': 0, 'cell': True}
 
     pairs = {}
     if not style.mono:
@@ -634,7 +859,8 @@ def build(key):
         pen = T2CharStringPen(g['adv'], None)
         moved = RecordingPen()
         g['rec'].replay(TransformPen(moved, (1, 0, 0, 1, g['dx'], 0)))
-        moved.replay(ExtremaPen(RoundingPen(pen)))
+        # Cell glyphs are straight lines and exact quarter arcs already.
+        moved.replay(RoundingPen(pen) if g.get('cell') else ExtremaPen(RoundingPen(pen)))
         charstrings[name] = pen.getCharString()
         b = bounds(moved)
         metrics[name] = (g['adv'], math.floor(b[0]))
@@ -642,20 +868,22 @@ def build(key):
         if g['variant'] == 0:
             cmap[ord(g['ch'])] = name
 
-    TYPO_ASC = round((LINE + cap_height) / 2)
-    TYPO_DESC = TYPO_ASC - LINE
+    bold = style.bold
     fb = FontBuilder(1000, isTTF=False)
     fb.setupGlyphOrder(order)
     fb.setupCharacterMap(cmap)
-    fb.setupCFF(ps, {'FullName': family, 'FamilyName': family, 'Weight': 'Regular'}, charstrings, {})
+    fb.setupCFF(ps, {'FullName': f'{family} {style.weight}', 'FamilyName': family, 'Weight': style.weight},
+                charstrings, {})
     fb.setupHorizontalMetrics(metrics)
     fb.setupHorizontalHeader(
         ascent=TYPO_ASC, descent=TYPO_DESC, lineGap=0, caretSlopeRise=1, caretSlopeRun=0)
+    # Regular and Bold are a style-linked pair (RIBBI): one family name,
+    # the weight in the subfamily name, so apps pair them for Cmd-B.
     fb.setupNameTable({
         'familyName': family,
-        'styleName': 'Regular',
+        'styleName': style.weight,
         'uniqueFontIdentifier': f'{VERSION:.3f};{ps}',
-        'fullName': f'{family} Regular',
+        'fullName': f'{family} {style.weight}',
         'psName': ps,
         'version': f'Version {VERSION:.3f}',
         'copyright': 'Copyright 2026 The Pinboard Fonts Project Authors (https://github.com/zjlgdx/pinboard-fonts)',
@@ -663,12 +891,16 @@ def build(key):
         'licenseDescription': 'This Font Software is licensed under the SIL Open Font License, Version 1.1.',
         'licenseInfoURL': 'https://openfontlicense.org',
     }, mac=False)
-    us = glyphs['underscore']
-    ub = bounds(us['rec'])
-    thick = round(ub[3] - ub[1])
+    # The underline is the Regular's underscore in both weights: apps draw
+    # one underline for a family, and fontbakery expects it to match.
+    if 'underline' not in shared:
+        ub = bounds(glyphs['underscore']['rec'])
+        shared['underline'] = (round(ub[3]), round(ub[3] - ub[1]))
+    under_pos, thick = shared['underline']
     fb.setupOS2(
-        version=4, usWeightClass=400, usWidthClass=5,
-        fsSelection=(1 << 6) | (1 << 7),          # REGULAR, USE_TYPO_METRICS
+        version=4, usWeightClass=700 if bold else 400, usWidthClass=5,
+        # BOLD or REGULAR, and USE_TYPO_METRICS
+        fsSelection=((1 << 5) if bold else (1 << 6)) | (1 << 7),
         sTypoAscender=TYPO_ASC, sTypoDescender=TYPO_DESC, sTypoLineGap=0,
         usWinAscent=math.ceil(y_max), usWinDescent=math.ceil(-y_min),
         sxHeight=x_height, sCapHeight=cap_height,
@@ -677,50 +909,45 @@ def build(key):
         usDefaultChar=0, usBreakChar=32, usMaxContext=2,
     )
     fb.setupPost(keepGlyphNames=False, isFixedPitch=1 if style.mono else 0,
-                 italicAngle=0, underlinePosition=round(ub[3]), underlineThickness=thick)
+                 italicAngle=0, underlinePosition=under_pos, underlineThickness=thick)
     font = fb.font
     font['head'].fontRevision = VERSION
+    font['head'].macStyle = 1 if bold else 0
     from fontTools.ttLib.tables.O_S_2f_2 import Panose
     p = Panose()
+    panose = list(style.panose)
+    panose[2] = 8 if bold else 5          # weight: Bold, or Book
     (p.bFamilyType, p.bSerifStyle, p.bWeight, p.bProportion, p.bContrast, p.bStrokeVariation,
-     p.bArmStyle, p.bLetterForm, p.bMidline, p.bXHeight) = style.panose
+     p.bArmStyle, p.bLetterForm, p.bMidline, p.bXHeight) = panose
     os2 = font['OS/2']
     os2.panose = p
     os2.recalcUnicodeRanges(font)
     os2.recalcCodePageRanges(font)
     os2.recalcAvgCharWidth(font)
 
-    # ---- features: alternates, then kerning
-    fea = ['languagesystem DFLT dflt;', 'languagesystem latn dflt;']
-    if style.alternates:
-        lower = [glyph_name(c) for c in ALL if c.islower()]
-        fea += [f'@cycle0 = [{" ".join(lower)}];']
-        for v in range(1, style.alternates + 1):
-            fea += [f'@cycle{v} = [{" ".join(n + f".alt{v}" for n in lower)}];',
-                    f'lookup to_alt{v} {{ sub @cycle0 by @cycle{v}; }} to_alt{v};']
-        # Each lowercase letter after another takes the next drawing in turn:
-        # "book" is written o, o.alt1 -- never the same o twice in a row.
-        rules = [f"  sub @cycle{v} @cycle0' lookup to_alt{v + 1};" for v in range(style.alternates - 1, 0, -1)]
-        rules.append("  sub @cycle0 @cycle0' lookup to_alt1;")
-        fea += ['feature calt {'] + rules + ['} calt;']
-    if pairs:
-        variants = {}
-        for name, g in glyphs.items():
-            variants.setdefault(g['ch'], []).append(name)
-        fea.append('feature kern {')
-        for (a, b), k in sorted(pairs.items()):
-            fea.append(f'  pos [{" ".join(variants[a])}] [{" ".join(variants[b])}] {k};')
-        fea.append('} kern;')
-    addOpenTypeFeaturesFromString(font, '\n'.join(fea))
+    addOpenTypeFeaturesFromString(font, features(style, glyphs, pairs))
+    print(f'{family} {style.weight}: {len(order)} glyphs, {len(cmap)} characters, {len(pairs)} kerned character pairs, '
+          f'x-height {x_height}, cap height {cap_height}')
+    return font, shared
 
+
+def build(key):
+    """Regular, then Bold on the Regular's line; both get the family's
+    largest ink bounds as win metrics, so neither clips the other's glyphs."""
+    regular, shared = make(STYLES[key](), None)
+    bold, _ = make(STYLES[key](bold=True), shared)
+    win_asc = max(f['OS/2'].usWinAscent for f in (regular, bold))
+    win_desc = max(f['OS/2'].usWinDescent for f in (regular, bold))
     OUT.mkdir(exist_ok=True)
-    otf = OUT / f'{ps}.otf'
-    font.save(otf)
-    w = TTFont(otf)
-    w.flavor = 'woff2'
-    w.save(OUT / f'{ps}.woff2')
-    print(f'{family}: {len(order)} glyphs, {len(pairs)} kerning pairs, '
-          f'x-height {x_height}, cap height {cap_height} -> {otf.name}, {otf.stat().st_size // 1024} KB')
+    for font in (regular, bold):
+        font['OS/2'].usWinAscent, font['OS/2'].usWinDescent = win_asc, win_desc
+        ps = font['name'].getDebugName(6)
+        otf = OUT / f'{ps}.otf'
+        font.save(otf)
+        w = TTFont(otf)
+        w.flavor = 'woff2'
+        w.save(OUT / f'{ps}.woff2')
+        print(f'  -> {otf.name}, {otf.stat().st_size // 1024} KB')
 
 
 if __name__ == '__main__':

@@ -11,7 +11,7 @@ Every outline in these fonts comes from this repository: the centre lines in `sk
 - **Looking is fine; tracing is not.** You may look at a reference glyph, a code chart or a photo to learn what a character is (Ƛ's shape, a stroke's direction or order). Draw it again yourself in the skeleton's own terms. Don't measure a reference font's coordinates.
 - **Check the licence of any new data source** before using it, and record the source in the README.
 
-Pinboard Typewriter NF CN (`terminal.py`, `fetch-sources.sh`) merged LXGW WenKai and Nerd Fonts. It is being retired, as milestone *Round 1 · Original only* tracks, and Chinese is being drawn here instead, a slice at a time.
+Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, which merged LXGW WenKai and Nerd Fonts. It was retired in *Round 1 · Original only*. Chinese and the terminal's icons are now drawn here, a slice at a time.
 
 ## Where things are
 

@@ -19,6 +19,8 @@ It merges three fonts into one, so a terminal never has to fall back:
   them in a monospaced font: one cell of advance, the icon free to run on
   over the next. Powerline separators are stretched to the full line, so a
   prompt's coloured segments join.
+- Two capitals WenKai lacks, Ƛ and Ɤ (new in Unicode 16), are drawn from its
+  own strokes, so ƛ and ɤ have their case pairs.
 
 Outlines are converted from TrueType to CFF: quadratic curves become cubic
 ones (merged where a single cubic fits within MAX_ERR), contours are turned
@@ -27,14 +29,18 @@ subroutines. The sources are fetched by the README's commands into
 sources/, which git ignores.
 """
 import argparse
+import math
 import time
 import unicodedata
 from pathlib import Path
 
+import booleanOperations
 import cffsubr
+from booleanOperations.booleanGlyph import BooleanGlyph
 from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
 from fontTools.fontBuilder import FontBuilder
 from fontTools.misc.psCharStrings import T2CharString
+from fontTools.pens.areaPen import AreaPen
 from fontTools.pens.basePen import BasePen
 from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.qu2cuPen import Qu2CuPen
@@ -58,6 +64,7 @@ PS_FAMILY = 'PinboardTypewriterNFCN'
 CELL = 600
 SCALE = 1.0           # WenKai's em to ours
 ICF_CENTRE = 348      # the middle of WenKai's ideographs' ink (永國中), moved to our caps' centre
+MEDIUM_GAIN = 6       # how much heavier WenKai's Medium is than its Regular, each side (|, l, I, H)
 MAX_ERR = 1.0         # how far a merged cubic may stray from the quadratics, in source units
 
 SOURCES = ('LXGW WenKai TC 1.530 (https://github.com/lxgw/LxgwWenkaiTC), '
@@ -173,6 +180,101 @@ def nerd_matrix(cp, ink, src_adv, line):
     return (k, 0, 0, k, 0, (asc + desc) / 2 - 614 * k)
 
 
+class Drawing:
+    """A recorded outline that draws like a glyph."""
+
+    def __init__(self, rec):
+        self.rec = rec
+
+    def draw(self, pen):
+        self.rec.replay(pen)
+
+
+def outline(glyphset, cmap, ch, matrix=(1, 0, 0, 1, 0, 0)):
+    """A WenKai character's glyph as cubic contours, transformed."""
+    return glyph_outline(glyphset, cmap[ord(ch)], matrix)
+
+
+def glyph_outline(glyphset, name, matrix=(1, 0, 0, 1, 0, 0)):
+    rec = RecordingPen()
+    flat = DecomposingRecordingPen(glyphset)
+    glyphset[name].draw(flat)
+    flat.replay(Cubics(TransformPen(rec, matrix)))
+    return rec
+
+
+def capitals(wk):
+    """Ƛ and Ɤ, the capitals of ƛ and ɤ, which arrived in Unicode 16 after
+    WenKai was drawn. Both are made from WenKai's own strokes, in its units
+    and contour direction:
+
+    - Ƛ, as the proposal that encoded it draws it (L2/23-191), is a stem with
+      a bar across it, standing on a Λ's legs: here WenKai's |, its hyphen
+      and its Λ pressed to half height, the legs widened a little so they
+      keep the stems' weight once flatter.
+    - Ɤ is the ram's horn ɤ grown to the height of Λ, its loop still on the
+      baseline (unlike Ɣ, whose loop hangs below it)."""
+    gs, cmap = wk.getGlyphSet(), wk.getBestCmap()
+    if not all(ord(c) in cmap for c in 'Λ|-Hɤ'):
+        return {}
+    lam = outline(gs, cmap, 'Λ')
+    lb = bounds(lam)
+    cx = (lb[0] + lb[2]) / 2
+    apex, legs_sx, bar_at, bar_sx = 0.52, 1.1, 0.67, 0.85
+    legs = outline(gs, cmap, 'Λ', (legs_sx, 0, 0, apex, cx - legs_sx * cx, 0))
+    sb = bounds(outline(gs, cmap, '|'))
+    bottom, top = lb[3] * apex - 60, bounds(outline(gs, cmap, 'H'))[3]
+    sy = (top - bottom) / (sb[3] - sb[1])
+    stem = outline(gs, cmap, '|', (1, 0, 0, sy, cx - (sb[0] + sb[2]) / 2, bottom - sb[1] * sy))
+    hb = bounds(outline(gs, cmap, '-'))
+    bar = outline(gs, cmap, '-', (bar_sx, 0, 0, 1, cx - bar_sx * (hb[0] + hb[2]) / 2,
+                                  wk['OS/2'].sCapHeight * bar_at - (hb[1] + hb[3]) / 2))
+    rb = bounds(outline(gs, cmap, 'ɤ'))
+    ry = (lb[3] - rb[1]) / (rb[3] - rb[1])
+    ram = outline(gs, cmap, 'ɤ', (1, 0, 0, ry, 0, rb[1] - rb[1] * ry))
+    return {0xA7DC: union(legs, stem, bar), 0xA7CB: ram}
+
+
+def embolden(rec, d):
+    """The outline grown by about d units all round: its union with copies
+    moved d in eight directions."""
+    copies = []
+    for i in range(8):
+        a = math.pi * i / 4
+        moved = RecordingPen()
+        rec.replay(TransformPen(moved, (1, 0, 0, 1, d * math.cos(a), d * math.sin(a))))
+        copies.append(moved)
+    return union(rec, *copies)
+
+
+def union(*recs):
+    """One outline from overlapping ones, turned back to TrueType's direction."""
+    shapes = BooleanGlyph()
+    for rec in recs:
+        rec.replay(shapes.getPen())
+    out = BooleanGlyph()
+    booleanOperations.union(shapes.contours, out.getPointPen())
+    rec = RecordingPen()
+    out.draw(rec)
+    if signed_area(rec) > 0:            # booleanOperations draws outer contours anticlockwise
+        flipped = RecordingPen()
+        rec.replay(ReverseContourPen(flipped))
+        rec = flipped
+    return rec
+
+
+def signed_area(rec):
+    a = AreaPen()
+    rec.replay(a)
+    return a.value
+
+
+def bounds(rec):
+    b = BoundsPen(None)
+    rec.replay(b)
+    return b.bounds
+
+
 def ink_bounds(glyph, glyphset):
     b = BoundsPen(glyphset)
     glyph.draw(b)
@@ -228,6 +330,37 @@ def merge(weight, scale, only=None, out=OUT):
                 marks.add(name)
             added['cjk' if adv == 2 * CELL else 'other'] += 1
         cmap[cp] = made[key]
+    # Capitals WenKai lacks, for the lowercase it has.
+    for cp, rec in capitals(wk).items():
+        lower = ord(chr(cp).lower())
+        if not wanted(cp) or lower not in cmap:
+            continue
+        name = f'u{cp:04X}'
+        drawing = Drawing(rec)
+        matrix = wenkai_matrix(wk['hmtx'][wcmap[lower]][0], CELL, bounds(rec), scale, cap_centre)
+        cs, lsb, _ = build.charstring(drawing, None, matrix, CELL, MAX_ERR)
+        charstrings[name], metrics[name] = cs, (CELL, lsb)
+        order.append(name)
+        cmap[cp] = name
+        added['other'] += 1
+    # A character the Regular has and the Medium lacks (1.530's fullwidth ｌ)
+    # is the Regular's, made as heavy as the Medium.
+    if weight != 'Regular':
+        reg = TTFont(WENKAI / WEIGHTS['Regular'])
+        rgs, rcmap = reg.getGlyphSet(), reg.getBestCmap()
+        for cp in sorted(set(rcmap) - set(wcmap)):
+            if not wanted(cp) or skip(cp) or cp in cmap or unicodedata.category(chr(cp)) in ('Mn', 'Me', 'Cf'):
+                continue
+            src = rcmap[cp]
+            adv = 2 * CELL if wide(cp) else CELL
+            rec = embolden(glyph_outline(rgs, src), MEDIUM_GAIN)
+            matrix = wenkai_matrix(reg['hmtx'][src][0], adv, bounds(rec), scale, cap_centre)
+            name = f'u{cp:04X}'
+            cs, lsb, _ = build.charstring(Drawing(rec), None, matrix, adv, MAX_ERR)
+            charstrings[name], metrics[name] = cs, (adv, lsb)
+            order.append(name)
+            cmap[cp] = name
+            added['cjk' if adv == 2 * CELL else 'other'] += 1
     # Variation sequences (IVS) whose base and glyph made it in.
     uvs = {}
     for sub in wk['cmap'].tables:

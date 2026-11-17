@@ -28,7 +28,7 @@ The Typewriter adds what a terminal draws:
 - the marks Claude Code prints: `❯ ⏺ ⎿ ✻ ✽ ✶ ✳ ✢ ✓ ✔ ✗ ✘ ⏵ ⏸ ☐ ☒ ☑`, and `■ □ ◼ ◻ ▪ ▫ ◆ ◇ ▶ ◀ ▲ ▼ ▸ ◯ ◉ ⚠ ↵ ⏎ ⌘ ⌥ ⌃ ⇧ ∗ ↯ ★ ☆ ✦ ✧ ⧉ ⇅ ⎋ ⋯ ※ ➜ ⌫ ⚡`
 - Powerline's separators (U+E0B0–E0B3), made to the cell so a prompt's segments join, and its branch, line-number and padlock marks (U+E0A0–E0A2)
 
-Every family has Chinese, Traditional and Simplified, written with its own pen: so far every character in the first 600 rows of [`hanzi_order.tsv`](hanzi_order.tsv) and a few more: 852 in all, Simplified and Traditional (`的 一 了 是 不 我 在 有 人 这/這 他 们/們 …`), and the full-width punctuation `。，、；：？！「」『』（）《》〈〉・`. More come in each round, both scripts together. Each family writes the same strokes its own way:
+Every family has Chinese, Traditional and Simplified, written with its own pen: so far every character in the first 800 rows of [`hanzi_order.tsv`](hanzi_order.tsv) and a few more: 1126 in all, Simplified and Traditional (`的 一 了 是 不 我 在 有 人 这/這 他 们/們 …`), and the full-width punctuation `。，、；：？！「」『』（）《》〈〉・`. More come in each round, both scripts together. Each family writes the same strokes its own way:
 
 - **Typewriter**: 仿宋 metal type, after the slugs of the Chinese typewriter, struck through the ribbon. Horizontals climb 5.5° while verticals stay upright; the face is a little narrow; the pen presses where it lands and where it stops; verticals are a little heavier than horizontals.
 - **Ballpoint**: a hand's 楷書. The pressure comes and goes, horizontals climb 4.5°, the character leans 4° to sit with the Latin's 9°, and each stroke strays a little from its place.

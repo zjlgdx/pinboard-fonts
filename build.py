@@ -81,7 +81,7 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.500         # head.fontRevision; nameID 5 says the same
+VERSION = 0.510         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -354,9 +354,9 @@ class Style:
     def draw_hanzi(self, ch, img, variant=0):
         """Chinese in this family's cut (hanzi.CUTS): the family's own pen,
         or its own nib, along the character's strokes. Variant 1 is the
-        form mainland China sets (hanzi.ZHS)."""
+        form mainland China sets in a line (hanzi.ZHS), 2 in a column (hanzi.VZHS)."""
         cut = hanzi.CUTS[self.key]
-        strokes, warp, rng = hanzi.placed(ch, self.key, cut['em'] / K, K, seed_for(self.key, ch), zhs=variant == 1)
+        strokes, warp, rng = hanzi.placed(ch, self.key, cut['em'] / K, K, seed_for(self.key, ch), form=variant)
         pen = cut['pen'][1 if self.bold else 0]
         draw = ImageDraw.Draw(img)
         if cut['nib'] is None:
@@ -819,7 +819,7 @@ def suffix(ch, variant):
     if not variant:
         return ''
     if ch in hanzi.ZHS:
-        return '.zhs'
+        return ('.zhs', '.zhs.vert')[variant - 1]
     return '.case' if ch in COMBINING_MARKS else f'.alt{variant}'
 
 
@@ -972,6 +972,30 @@ def cjk_spacing(style, glyphs):
             f'  pos @CJK_RIGHT_BLANK <0 0 -{half} 0>;',
             f'  pos @CJK_CENTRED <-{quarter} 0 -{half} 0>;',
             '} halt;']
+    # The same along a column (vchw, vhal), on the vertical forms: there an
+    # opening bracket's top half is blank, a closing one's bottom half, and the
+    # mainland's 。，、：； (in the upper right) leave the bottom half. ？！ are as
+    # tall as a character in a column and have nothing to give.
+    turned = {glyph_name(h): glyph_name(v) for h, v in hanzi.VERTICAL.items()}
+    v_open = [turned[n] for n in opening if turned[n] in glyphs]
+    v_close = [turned[n] for n in closing if turned[n] in glyphs]
+    if not (v_open and v_close):
+        return fea
+    short = have('。、，；：')
+    v_low = [n + '.zhs.vert' for n in short if n + '.zhs.vert' in glyphs]
+    fea += [f'@CJK_V_OPEN = [{" ".join(v_open)}];', f'@CJK_V_CLOSE = [{" ".join(v_close)}];',
+            f'@CJK_V_BOTTOM_BLANK = [{" ".join(v_close + v_low)}];', f'@CJK_V_CENTRED = [{" ".join(short)}];',
+            'feature vchw {',
+            f"  pos @CJK_V_BOTTOM_BLANK' <0 0 0 -{half}> [@CJK_V_BOTTOM_BLANK @CJK_V_OPEN];",
+            f"  pos @CJK_V_OPEN' <0 0 0 -{half}> @CJK_V_OPEN;"]
+    if not style.mono:
+        fea += [f"  pos @CJK_V_CENTRED' <0 0 0 -{quarter}> @CJK_V_OPEN;",
+                f"  pos @CJK_V_CLOSE' <0 0 0 -{quarter}> @CJK_V_CENTRED;"]
+    fea += ['} vchw;', 'feature vhal {',
+            f'  pos @CJK_V_OPEN <0 {half} 0 -{half}>;',
+            f'  pos @CJK_V_BOTTOM_BLANK <0 0 0 -{half}>;',
+            f'  pos @CJK_V_CENTRED <0 {quarter} 0 -{half}>;',
+            '} vhal;']
     return fea
 
 
@@ -989,6 +1013,11 @@ def features(style, glyphs, pairs, anchors):
         fea += ['feature locl {', '  script hani;', '  language ZHS exclude_dflt;']
         fea += [f'  sub {n[:-4]} by {n};' for n in zhs]
         fea += ['} locl;']
+    # In a column: brackets turned, and the mainland's marks moved (after locl).
+    vert = [(glyph_name(h), glyph_name(v)) for h, v in hanzi.VERTICAL.items() if glyph_name(v) in glyphs]
+    vert += sorted((n[:-5], n) for n in glyphs if n.endswith('.zhs.vert'))
+    if vert:
+        fea += ['feature vert {'] + [f'  sub {a} by {b};' for a, b in vert] + ['} vert;']
     fea += cjk_spacing(style, glyphs)
     if style.alternates:
         lower = [g['ch'] for g in glyphs.values() if g['variant'] == 0 and kind(g['ch']) == 'lower'
@@ -1049,7 +1078,8 @@ def make(style, shared=None):
             if ch in COMBINING_MARKS and ANCHOR[COMBINING_MARKS[ch]] == 'top':
                 variants = 1        # the capital form, `.case`
             if ch in hanzi.ZHS:
-                variants = 1        # as mainland China sets it, `.zhs`
+                # as mainland China sets it in a line, `.zhs`, and in a column, `.zhs.vert`
+                variants = 2 if ch in hanzi.VZHS else 1
             for v in range(variants + 1):
                 # A Wide character's canvas runs a cell further right.
                 wide = (wide_cells(ch) - 1) * style.advance / K if style.mono else 0
@@ -1192,6 +1222,7 @@ def make(style, shared=None):
         charstrings[sp] = T2CharStringPen(style.space, None).getCharString()
         metrics[sp] = (style.space, 0)
     y_min, y_max = 0, 0
+    tops = {'.notdef': 600}
     for name, g in glyphs.items():
         pen = T2CharStringPen(g['adv'], None)
         placed = moved(g['rec'], g['dx'])
@@ -1200,6 +1231,7 @@ def make(style, shared=None):
         charstrings[name] = pen.getCharString()
         b = bounds(placed)
         metrics[name] = (g['adv'], math.floor(b[0]))
+        tops[name] = b[3]
         y_min, y_max = min(y_min, b[1]), max(y_max, b[3])
         if g['variant'] == 0:
             cmap[ord(g['ch'])] = name
@@ -1213,6 +1245,14 @@ def make(style, shared=None):
     fb.setupHorizontalMetrics(metrics)
     fb.setupHorizontalHeader(
         ascent=TYPO_ASC, descent=TYPO_DESC, lineGap=0, caretSlopeRise=1, caretSlopeRun=0)
+    # In a column every glyph is one em tall, and the em is Chinese's: its top
+    # (VORG) is the top of the frame hanzi are drawn in, whose middle is the
+    # grid's y 500 (skeleton y 400), so hanzi sit in a column as in a line.
+    em = hanzi.CUTS[style.key]['em']
+    origin = round((BASE - 400) * K + lift + em / 2)
+    fb.setupVerticalHeader(ascent=em // 2, descent=-(em // 2), lineGap=0, caretSlopeRise=0, caretSlopeRun=1)
+    fb.setupVerticalMetrics({n: (em, round(origin - tops[n]) if n in tops else 0) for n in order})
+    fb.setupVerticalOrigins({}, origin)
     # Regular and Bold are a style-linked pair (RIBBI): one family name,
     # the weight in the subfamily name, so apps pair them for Cmd-B.
     fb.setupNameTable({
@@ -1283,7 +1323,7 @@ def autohint(font):
     # Chinese has its own lines, not the Latin's blue zones: leave it unhinted
     # rather than snap its strokes to the x-height and cap height.
     cell += sorted({cmap[cp] for cp in cmap if chr(cp) in hanzi.C})
-    cell += sorted(n for n in font.getGlyphOrder() if n.endswith('.zhs'))
+    cell += sorted(n for n in font.getGlyphOrder() if '.zhs' in n)
     with tempfile.TemporaryDirectory() as t:
         src, dst = Path(t) / 'in.otf', Path(t) / 'out.otf'
         font.save(src)

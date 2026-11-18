@@ -77,8 +77,11 @@ percents but one decimal past 99.5, so it never shows 100%.
 
 `check_fonts.py` fails on a stale font, an OTS failure, a fontbakery FAIL, or
 anything that looks personal (add your own name with `--private` or
-`PINBOARD_PRIVATE`). The known warnings: file size, and in the Typewriter
-fontbakery's CFF `glyf` error and the double-width `xAvgCharWidth`.
+`PINBOARD_PRIVATE`). The known results, explained in the README, are printed
+but pass: file size (the WARN past 1 MB, and `massive-font`'s FAIL past 9 MB,
+marked `(known)`), and in the Typewriter fontbakery's CFF `glyf` error and the
+double-width `xAvgCharWidth`. A new FAIL code is fixed, or explained in the
+README and added to `KNOWN_FAIL` in `check_fonts.py`, once the maintainer agrees.
 
 ## 4. Proof and design board
 

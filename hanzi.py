@@ -115,7 +115,7 @@ def strokes(spec):
     return out
 
 
-from hanzi_strokes import C, ZHS   # noqa: E402  (the characters, kept apart from the engine)
+from hanzi_strokes import C, VERTICAL, VZHS, ZHS   # noqa: E402,F401  (the characters, kept apart from the engine)
 
 
 def flatten(item, box=(0, 0, 1000, 1000)):
@@ -164,11 +164,12 @@ def by_hand(strokes, rng, amount):
     return out
 
 
-def placed(ch, family, cell, K, seed, zhs=False):
+def placed(ch, family, cell, K, seed, form=0):
     """A character's strokes, and the warp from its 1000 grid onto the
     skeleton canvas: the family's cut, its face centred in `cell` (skeleton
     units, K of them to a font unit) and on the capitals (y 400), struck or
-    written a little off. `zhs`: the form mainland China sets (ZHS)."""
+    written a little off. `form` 1 is the form mainland China sets in a line
+    (ZHS), 2 the one it sets in a column (VZHS)."""
     cut = CUTS[family]
     rng = random.Random(seed)
     sc = cut['face'] / K / 1000
@@ -185,4 +186,4 @@ def placed(ch, family, cell, K, seed, zhs=False):
         x = x - lean * (y - 500)
         x, y = (x - 500) * sc, (y - 500) * sc
         return x * cr - y * sr + cell / 2, x * sr + y * cr + 400 + dy
-    return by_hand(flatten((ZHS if zhs else C)[ch]), rng, cut['hand']), warp, rng
+    return by_hand(flatten((C, ZHS, VZHS)[form][ch]), rng, cut['hand']), warp, rng

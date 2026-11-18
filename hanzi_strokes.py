@@ -307,6 +307,23 @@ C['》'] = S('E M380 140 L620 500 L380 860; E M200 140 L440 500 L200 860')
 C['〈'] = S('E M650 140 L400 500 L650 860')
 C['〉'] = S('E M350 140 L600 500 L350 860')
 C['・'] = S('E M498 496 l2 8')
+
+# The same brackets in a column (vertical text, OpenType vert), turned a quarter
+# clockwise: the opening one sits low in its em, against the character below,
+# the closing one high. Each is written in a hand's stroke order (﹁ as 橫折,
+# ﹂ as 豎折), not turned, so the pen's pressure and the chisel fall as they
+# would writing a column. They answer their own code points too (U+FE35-FE44).
+C['﹁'] = S('E M440 520 L880 520 L880 860')
+C['﹂'] = S('E M120 140 L120 480 L560 480')
+C['﹃'] = S('E M400 470 L900 470 L900 880; E M400 550 L820 550 L820 880')
+C['﹄'] = S('E M100 120 L100 530 L600 530; E M180 120 L180 450 L600 450')
+C['︵'] = S('E M60 690 C250 470 750 470 940 690')
+C['︶'] = S('E M60 310 C250 530 750 530 940 310')
+C['︽'] = S('E M140 620 L500 380 L860 620; E M140 800 L500 560 L860 800')
+C['︾'] = S('E M140 200 L500 440 L860 200; E M140 380 L500 620 L860 380')
+C['︿'] = S('E M140 650 L500 400 L860 650')
+C['﹀'] = S('E M140 350 L500 600 L860 350')
+VERTICAL = dict(zip('「」『』（）《》〈〉', '﹁﹂﹃﹄︵︶︽︾︿﹀'))
 C['去'] = K['去']
 
 
@@ -2796,3 +2813,11 @@ def _moved(strokes, dx, dy):
 ZHS = {ch: _moved(C[ch], dx, dy) for ch, dx, dy in (
     ('。', -270, 300), ('，', -270, 260), ('、', -260, 280),
     ('；', -280, 0), ('：', -280, 0), ('？', -270, 0), ('！', -280, 0))}
+
+# In a column, mainland China sets all seven marks 置于相应文字之下偏右
+# (GB/T 15834-2011, 5.2.1): 。，、：； in the upper right of the frame, and ？！,
+# which are as tall as a character, moved right. Taiwan keeps them centred and
+# upright in a column too (重訂標點符號手冊), so it needs no forms of its own.
+VZHS = {ch: _moved(C[ch], dx, dy) for ch, dx, dy in (
+    ('。', 270, -290), ('，', 270, -270), ('、', 260, -280), ('：', 220, -270), ('；', 220, -250),
+    ('？', 200, 0), ('！', 220, 0))}

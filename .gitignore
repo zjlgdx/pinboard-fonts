@@ -3,3 +3,6 @@ __pycache__/
 .DS_Store
 # The built fonts are attached to each GitHub Release, not committed.
 out/
+
+# Work in progress: draft batches of a round, Unihan, proofs. Not committed.
+work/

@@ -4,16 +4,18 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
 
 - every font's head.fontRevision is build.py's VERSION (the fonts are fresh);
 - the OpenType Sanitizer passes every .otf;
-- fontbakery check-universal, per family, has no FAIL or FATAL (its full
-  report goes to OUT_DIR/fontbakery-FAMILY.txt, one file per checkout, so
-  checks can run side by side);
+- fontbakery check-universal, per family, has no FAIL or FATAL but the known
+  ones (its full report goes to OUT_DIR/fontbakery-FAMILY.txt, one file per
+  checkout, so checks can run side by side);
 - no personal data: emails, home or temp paths, or anything --private matches
   (or the PINBOARD_PRIVATE environment variable), in the .otf files or the
   .woff2 files decompressed.
 
-Exits 1 if any of them fails. The known warnings (file size; in the
-Typewriter, the CFF fonts' glyf error and the double-width xAvgCharWidth) are
-printed, not failed.
+Exits 1 if any of them fails. The known results, which the README explains,
+are printed, not failed: file size (a WARN past 1 MB, and file_size's
+massive-font FAIL past 9 MB, as a full set of common Chinese characters
+runs past it) and, in the Typewriter, the CFF fonts' glyf error and the
+double-width xAvgCharWidth.
 """
 import argparse
 import os
@@ -50,6 +52,8 @@ for f in otfs:
     if p.returncode:
         bad.append(f'OTS {f.name}')
 
+KNOWN_FAIL = ('[code: massive-font]',)   # the README explains each
+
 print('== fontbakery check-universal')
 fb = Path(sys.executable).with_name('fontbakery')
 for fam in sorted({f.name.split('-')[0] for f in otfs}):
@@ -59,10 +63,17 @@ for fam in sorted({f.name.split('-')[0] for f in otfs}):
     txt = log.read_text(errors='replace')
     counts = dict(re.findall(r'\b(ERROR|FATAL|FAIL|WARN): (\d+)', txt))
     print(f'  {fam}: ' + ' '.join(f'{k} {v}' for k, v in counts.items()))
+    fails = []
     for line in txt.splitlines():
-        if re.match(r'^\s*(?:[^\w\s]+\s*)?(FAIL|FATAL|ERROR|WARN)\s', line):   # not the legend's 'A FAIL is ...'
-            print('     ' + line.strip()[:100])
-    if int(counts.get('FAIL', 0)) or int(counts.get('FATAL', 0)):
+        m = re.match(r'^\s*(?:[^\w\s]+\s*)?(FAIL|FATAL|ERROR|WARN)\s', line)   # not the legend's 'A FAIL is ...'
+        if m:
+            known = m.group(1) == 'FAIL' and any(k in line for k in KNOWN_FAIL)
+            print('     ' + line.strip()[:100] + ('  (known)' if known else ''))
+            if m.group(1) in ('FAIL', 'FATAL'):
+                fails.append(known)
+    # a FAIL counts unless its line names a known code; a count with no
+    # matching line (a wrapped or new format) fails too
+    if not all(fails) or len(fails) < int(counts.get('FAIL', 0)) + int(counts.get('FATAL', 0)):
         bad.append(f'fontbakery {fam}')
 
 print('== personal data')

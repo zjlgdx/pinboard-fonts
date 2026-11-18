@@ -38,5 +38,6 @@ def chars_of(lo, hi):
     for r in rows():
         if lo <= int(r[0]) <= hi:
             for ch in r[2] + r[3]:
-                seen.setdefault(ch, None)
+                if ch != '-':       # no Simplified form in level 1
+                    seen.setdefault(ch, None)
     return list(seen)

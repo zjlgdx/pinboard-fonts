@@ -3,6 +3,8 @@ Simplified together.
 
     python order.py <folder with Unihan's .txt files>  >  hanzi_order.tsv
 
+(work/unihan/ keeps a copy; it isn't committed.)
+
 Source: the Unicode Han Database (Unihan, UAX #38), under the Unicode
 License v3 (https://www.unicode.org/terms_of_use.html). Facts about
 characters only; no glyphs.
@@ -19,7 +21,16 @@ characters only; no glyphs.
 
 Each row: rank, count, the Simplified form, its Traditional forms (the same
 character where both write it alike), and the 通用规范汉字表 level-1 index or
-'-'. A round draws the next rows in order, every form in them.
+'-' (a Traditional form in level 1 itself adds its own: 干 乾干幹 23 乾:2215).
+A round draws the next rows in order, every form in them.
+
+After the frequency rows come the characters with no count that the fonts
+still owe: the rest of level 1, and of Taiwan's 4,808 common characters
+(moe_4808.tsv, plus 汨: see that file). Their count is 0 and they are sorted by
+kRSUnicode, radical then strokes, so a round draws a radical's family
+together. A level-1 character brings its Traditional forms, as above. A
+character only Taiwan's list has gets '-' for its Simplified form when the
+mainland writes it differently: that form isn't in level 1.
 """
 import re
 import sys
@@ -40,7 +51,20 @@ def chars(value):
     return [chr(int(u[2:].split('<')[0], 16)) for u in value.split()]
 
 
-def main(folder):
+def radical_strokes(value):
+    """kRSUnicode '120.6' or "213'.0" -> (120, 0, 6): radical, simplified, strokes."""
+    rad, strokes = value.split()[0].split('.')
+    return int(rad.rstrip("'")), rad.count("'"), int(strokes)
+
+
+def moe_4808(path):
+    out = [chr(int(line.split('\t')[1][2:], 16)) for line in Path(path).read_text(encoding='utf-8').splitlines()
+           if line.startswith('A')]
+    assert len(out) == 4808, len(out)
+    return out + ['汨']     # A02149: printed 汨, coded 汩; both are drawn
+
+
+def main(folder, moe_path=Path(__file__).with_name('moe_4808.tsv')):
     pinlu = fields(folder, 'Unihan_Readings.txt', 'kHanyuPinlu')
     trad = fields(folder, 'Unihan_Variants.txt', 'kTraditionalVariant')
     tgh = fields(folder, 'Unihan_OtherMappings.txt', 'kTGH')
@@ -61,18 +85,40 @@ def main(folder):
     for ch, n in sorted(count.items(), key=lambda kv: (-kv[1], ord(kv[0]))):
         if ch not in merged:
             rows.append((ch, n, forms_of(ch)))
+
+    # Past the frequency list: the rest of level 1 and of Taiwan's 4,808.
+    simp = fields(folder, 'Unihan_Variants.txt', 'kSimplifiedVariant')
+    rs = fields(folder, 'Unihan_IRGSources.txt', 'kRSUnicode')
+    level_1 = {ch for ch, v in tgh.items() if any(int(i) <= 3500 for i in re.findall(r'2013:(\d+)', v))}
+    seen = {f for _, _, forms in rows for f in forms} | {ch for ch, _, _ in rows}
+    more = []
+    for ch in sorted(level_1 - seen, key=ord):
+        more.append((ch, 0, forms_of(ch)))
+    seen |= {f for _, _, forms in more for f in forms} | {ch for ch, _, _ in more}
+    for t in moe_4808(moe_path):
+        if t not in seen:
+            same = t not in simp or t in chars(simp[t])
+            more.append((t if same else '-', 0, [t]))
+            seen.add(t)
+    more.sort(key=lambda r: (radical_strokes(rs[r[2][0]]), ord(r[2][0])))
+    rows += more
     head = (Path(folder) / 'Unihan_Readings.txt').read_text(encoding='utf-8').splitlines()[:6]
     version = next(line[2:] for line in head if line.startswith('# Unicode Version'))
     print(f'# Chinese characters by frequency, from the Unicode Han Database (Unihan), {version}.')
-    print('# Made by order.py: kHanyuPinlu counts, kTraditionalVariant and kIRG_TSource T1 forms, kTGH level 1.')
+    print('# Made by order.py: kHanyuPinlu counts, kTraditionalVariant and kIRG_TSource T1 forms, kTGH level 1;')
+    print('# then, with count 0, the rest of level 1 and of moe_4808.tsv, by kRSUnicode.')
     print('# Unihan: Copyright © 1991-2026 Unicode, Inc. Unicode License v3, https://www.unicode.org/license.txt')
     print('# rank\tcount\tsimplified\ttraditional\ttgh-level-1')
-    for rank, (ch, n, forms) in enumerate(rows, 1):
-        level1 = '-'
+    def index(ch):
         m = re.search(r'2013:(\d+)', tgh.get(ch, ''))
-        if m and int(m.group(1)) <= 3500:
-            level1 = m.group(1)
-        print(f'{rank}\t{n}\t{ch}\t{"".join(forms)}\t{level1}')
+        return m.group(1) if m and int(m.group(1)) <= 3500 else None
+
+    for rank, (ch, n, forms) in enumerate(rows, 1):
+        # The Simplified form's level-1 index, then any Traditional form's
+        # that is in level 1 itself (干 乾干幹: 23 乾:2215).
+        level1 = [index(ch)] if index(ch) else []
+        level1 += [f'{t}:{index(t)}' for t in forms if t != ch and index(t)]
+        print(f'{rank}\t{n}\t{ch}\t{"".join(forms)}\t{" ".join(level1) or "-"}')
 
 
 if __name__ == '__main__':

@@ -24,7 +24,7 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 | `order.py`, `hanzi_order.tsv` | The order Chinese is drawn in, most frequent first, Traditional and Simplified on one row, made from Unihan (see the README). Run `order.py` on a newer Unihan to refresh it. A round takes the next rows not yet drawn. |
 | `audit.py`, `proof.py`, `spacing.py`, `sheet.py` | Checks and proof sheets. `sheet.py docs/specimen.png` makes the README's specimen. |
 | `outline.py`, `subset.py` | Letters for the Pinboard theme's board: SVG outlines, or WOFF2 subsets. |
-| `out/` | The built fonts, committed. Merged builds over a few MB go to GitHub Releases, not git. |
+| `out/` | Where the build writes the fonts. Not committed: each release attaches them (`.otf` and `.woff2`) on GitHub Releases. |
 
 ## How to work
 
@@ -46,6 +46,7 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 - fontbakery's results should match what the README says. A new FAIL is fixed, or explained in the README as deliberate.
 - Scan for secrets with `gitleaks git --staged` before committing. Published files must contain no personal data: no names, emails or local paths.
 - Never force-push or rewrite `main`. The maintainer merges.
+- A release is a tag on `main` (`v` plus `VERSION`) with every `out/*.otf` and `out/*.woff2` attached and their SHA-256 in the notes.
 
 ## Licence
 

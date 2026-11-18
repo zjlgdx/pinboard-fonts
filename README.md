@@ -42,7 +42,7 @@ Chinese is being drawn a slice at a time (see the [milestones](https://github.co
 
 ## Use the fonts
 
-The fonts are in `out/`: `.otf` for installing, `.woff2` for the web. On a Mac, double-click an `.otf` and choose Install Font. Install both weights of a family.
+Download the fonts from the [latest release](https://github.com/zjlgdx/pinboard-fonts/releases/latest): `.otf` for installing, `.woff2` for the web. Up to 0.510 they were committed in `out/` too; from 0.520 they're only on Releases, which keeps the repository small. To build them yourself, see below. On a Mac, double-click an `.otf` and choose Install Font. Install both weights of a family.
 
 ```css
 @font-face { font-family: 'Pinboard Ballpoint'; src: url(PinboardBallpoint-Regular.woff2) format('woff2'); font-weight: 400; }

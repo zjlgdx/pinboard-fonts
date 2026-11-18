@@ -1,6 +1,5 @@
 .venv/
 __pycache__/
 .DS_Store
-out/*
-!out/*.otf
-!out/*.woff2
+# The built fonts are attached to each GitHub Release, not committed.
+out/

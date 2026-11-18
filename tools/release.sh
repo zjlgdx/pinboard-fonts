@@ -8,9 +8,10 @@
 set -euo pipefail
 FIRST=$1 LAST=$2 FIX=${3:-}
 cd "$(dirname "$0")/.."
-PY=${PY:-.venv/bin/python}
+# a worktree has no .venv of its own: use the main checkout's
+PY=${PY:-$( [ -x .venv/bin/python ] && echo .venv/bin/python || echo "$(git rev-parse --path-format=absolute --git-common-dir)/../.venv/bin/python")}
 V=$(sed -nE 's/^VERSION = ([0-9.]+).*/\1/p' build.py)
-git fetch -q origin main
+git fetch -q --tags origin main   # the tags too: the notes count from the last release
 MV=$(git show origin/main:build.py | sed -nE 's/^VERSION = ([0-9.]+).*/\1/p')
 [ "$V" = "$MV" ] || { echo "main is at $MV, this checkout at $V: merge first" >&2; exit 1; }
 "$PY" - "$V" <<'EOF'

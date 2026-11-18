@@ -16,6 +16,8 @@ WT=$1 BASE=$2 BATCH=$3 BUILD=${4:-}
 REPO=$(cd "$(dirname "$0")/.." && pwd)
 PY=${PY:-$REPO/.venv/bin/python}
 mkdir -p "$WT"
+# Absolute, as git -C and each build's cd would read a relative one elsewhere.
+WT=$(cd "$WT" && pwd)
 prev=$BASE
 built=()
 while read -r issue first last version prefix; do

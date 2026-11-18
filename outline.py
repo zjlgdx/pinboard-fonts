@@ -25,6 +25,7 @@ from fontTools.pens.transformPen import TransformPen
 from fontTools.ttLib import TTFont
 
 import build
+import cells
 
 OUT = Path(__file__).resolve().parent / 'out'
 PENS = {'hand': ('ballpoint', 'PinboardBallpoint'), 'mk': ('marker', 'PinboardMarker'),
@@ -111,10 +112,21 @@ def main():
             font = TTFont(OUT / f'{stem}-Regular.otf')
             gs, cmap, hmtx = font.getGlyphSet(), font.getBestCmap(), font['hmtx']
             adv, d = {}, {}
+            # Box drawing, blocks and Powerline separators are cell geometry
+            # (cells.py), not pen strokes: the font's outline is already exact.
+            # Only which characters cells.py draws matters here, not the sizes.
+            os2 = font['OS/2']
+            cell = set(cells.glyphs(build.Typewriter.advance, os2.sTypoAscender, os2.sTypoDescender, 80)) \
+                if style_key == 'typewriter' else set()
             for ch in chars:
                 name = cmap[ord(ch)]
                 adv[ch] = round(hmtx[name][0] / GRID, 1)
                 if ch == ' ':
+                    continue
+                if ch in cell:
+                    pen = CompactPen()
+                    gs[name].draw(pen)
+                    d[ch] = pen.d()
                     continue
                 # Place the smooth outline where the font's own glyph sits:
                 # spaced across, and lifted onto the baseline as the font is.

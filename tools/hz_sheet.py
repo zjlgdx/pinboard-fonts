@@ -60,7 +60,7 @@ for ch in [c for c in chars if c in hs.C]:
     for t in ts:
         cell.paste(t, (x, 0))
         x += t.width
-    cell.paste(big, (0, ts[0].height + 4))
+    cell.paste(big, ((cell.width - 10 - big.width) // 2, ts[0].height + 4))   # centred, so it can't look shifted
     cells.append((ch, cell))
 cw = max(c.width for _, c in cells)
 chh = max(c.height for _, c in cells)

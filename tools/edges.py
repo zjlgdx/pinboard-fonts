@@ -47,4 +47,9 @@ if __name__ == '__main__':
         for key, n, bad in ex.map(check, [(s, a.batch, a.chars) for s in a.styles]):
             print(f'{key}: {n} drawn, cut: {bad or "none"}')
             cut |= bool(bad)
+            # --chars that draw nothing (mangled by a shell pipe, say) must
+            # not pass as clean
+            if a.chars and not n:
+                print(f'{key}: none of --chars is a character in C')
+                cut = True
     sys.exit(1 if cut else 0)

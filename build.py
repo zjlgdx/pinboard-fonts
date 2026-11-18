@@ -81,7 +81,7 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.510         # head.fontRevision; nameID 5 says the same
+VERSION = 0.520         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents

@@ -8,8 +8,9 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
   ones (its full report goes to OUT_DIR/fontbakery-FAMILY.txt, one file per
   checkout, so checks can run side by side);
 - no personal data: emails, home or temp paths, or anything --private matches
-  (or the PINBOARD_PRIVATE environment variable), in the .otf files or the
-  .woff2 files decompressed.
+  (or the PINBOARD_PRIVATE environment variable), wherever text can live in
+  the .otf and .woff2 files: every table but the outlines, the CFF strings,
+  the glyph names, and the WOFF metadata.
 
 Exits 1 if any of them fails. The known results, which the README explains,
 are printed, not failed: file size (a WARN past 1 MB, and file_size's
@@ -22,7 +23,6 @@ import os
 import re
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 import _repo
 
@@ -81,14 +81,29 @@ pat = r'[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z.]{2,}|/Users/|/home/|/private/t
 if a.private:
     pat += '|' + a.private
 rx = re.compile(pat.encode(), re.I)
-with tempfile.TemporaryDirectory() as t:
-    files = list(otfs)
-    for w in sorted(out.glob('*.woff2')):
-        f = TTFont(w)
-        f.flavor = None
-        f.save(Path(t) / (w.name + '.sfnt'))
-        files.append(Path(t) / (w.name + '.sfnt'))
-    hits = [f.name for f in files if rx.search(f.read_bytes())]
+OUTLINES = {'CFF ', 'CFF2', 'glyf', 'gvar'}
+
+
+def text_of(path):
+    """The bytes where text can live: every table but the outlines (random
+    outline bytes can look like an email), the CFF's strings and the glyph
+    names, and a WOFF's metadata and private blocks."""
+    f = TTFont(path)
+    parts = [f.reader[tag] for tag in f.reader.keys() if tag not in OUTLINES]
+    if 'CFF ' in f:
+        cff = f['CFF '].cff
+        parts += [n.encode('latin-1', 'replace') for n in [*cff.fontNames, *cff.strings.strings]]
+    parts += [n.encode('latin-1', 'replace') for n in f.getGlyphOrder()]
+    parts += [getattr(f.reader, b, None) or b'' for b in ('metaData', 'privData')]
+    return b'\n'.join(parts)
+
+
+files = [*otfs, *sorted(out.glob('*.woff2'))]
+hits = []
+for f in files:
+    m = rx.search(text_of(f))
+    if m:
+        hits.append(f'{f.name} ({m.group().decode("latin-1")!r})')
 print('  hits:', ', '.join(hits) or 'none', f'({len(files)} files)')
 if hits:
     bad.append('personal data in ' + ', '.join(hits))

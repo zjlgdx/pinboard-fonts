@@ -1062,6 +1062,16 @@ def features(style, glyphs, pairs, anchors):
     return '\n'.join(fea)
 
 
+def canvas(style, ch):
+    """The empty bitmap a character is drawn on. The pens' jitter depends on
+    its size, so anything that checks a drawing (tools/edges.py) uses this too."""
+    # A Wide character's canvas runs a cell further right.
+    wide = (wide_cells(ch) - 1) * style.advance / K if style.mono else 0
+    if ch in hanzi.C:
+        wide = max(wide, hanzi.CUTS[style.key]['em'] / K + 100 - (X0 + W))
+    return Image.new('L', (int((W + wide) * S), int(H * S)), 0)
+
+
 def make(style, shared=None):
     """One font of a family. `shared` carries the Regular's vertical metrics,
     so both weights set lines alike."""
@@ -1081,11 +1091,7 @@ def make(style, shared=None):
                 # as mainland China sets it in a line, `.zhs`, and in a column, `.zhs.vert`
                 variants = 2 if ch in hanzi.VZHS else 1
             for v in range(variants + 1):
-                # A Wide character's canvas runs a cell further right.
-                wide = (wide_cells(ch) - 1) * style.advance / K if style.mono else 0
-                if ch in hanzi.C:
-                    wide = max(wide, hanzi.CUTS[style.key]['em'] / K + 100 - (X0 + W))
-                img = Image.new('L', (int((W + wide) * S), int(H * S)), 0)
+                img = canvas(style, ch)
                 img = style.draw(ch, img, v)
                 edge = np.asarray(img)
                 if edge[:2].any() or edge[-2:].any() or edge[:, :2].any() or edge[:, -2:].any():

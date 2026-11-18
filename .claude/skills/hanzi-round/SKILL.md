@@ -45,6 +45,10 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   the Marker (懼's 瞿 did this). Start at 30, or the rect at 40–50.
 - **Stacked parts crowd.** 疊, 寧, 憋 needed their top parts smaller and the
   lower ones given more of the height.
+- **A shell pipe can mangle the characters.** `grep | cut -c` on macOS cuts
+  bytes, not characters; pull a batch's characters out with Python.
+  `edges.py` fails when none of `--chars` is drawn, so a mangled list can't
+  pass as clean.
 
 ## 2. Check the edges, then merge
 
@@ -113,14 +117,30 @@ makes the tag `vVERSION` with the fonts and their SHA-256.
 `ISSUE FIRST LAST VERSION PREFIX`. It makes one worktree per round, each
 branch one commit on the one before, and builds them all at once (seven take
 about two hours on 18 cores). Set `COMMIT_TRAILER` for a Co-Authored-By line.
-Check, proof and ship them in order. Once a PR merges, the next one shows
-only its own commit. If one needs a fix, amend that branch (it isn't pushed
-yet) and rebuild only it.
+Check, proof and ship them in order.
+
+- Before stacking rounds drafted side by side, run `tools/hz_dupes.py` on all
+  their batches in row order and keep one definition of each part (the
+  earliest, as a rule). Then check that the one kept means the same thing to
+  every user: one round's `K['贰']` had its 贝 and another's didn't, so the
+  second's 贰 would have drawn 贝 twice. Redraw everything that uses a part
+  you removed.
+- Once a PR merges, merge `origin/main` into the next branch (a merge commit;
+  never rebase a branch others stack on), then run `check_fonts.py` there.
+- A worktree has no `work/`: write its proof into the main checkout's
+  (`round_proof.py FIRST LAST /path/to/fontkit/work/proofV.jpg`).
+  `release.sh` finds the main checkout's `.venv` and fetches the tags itself.
+- A fix that later rounds need (a part redrawn in `hanzi_strokes.py`): commit
+  it on its round's branch, then merge that branch into the later ones, and
+  rebuild only what changed.
 
 ## Past the frequency list
 
-`hanzi_order.tsv` has 2,849 rows. The milestone after it asks for the
-characters that have no corpus count: Taiwan's 常用國字標準字體表 (4,808) and
-the first level of 通用规范汉字表 (3,500, Unihan `kTGH` 1–3500). Their order
-and their sources are a decision for the maintainer. Record any new list's
-source and licence in the README before using it.
+The corpus counts end at row 2,849. Rows 2,850–4,823 (count 0) are the rest
+of Taiwan's 常用國字標準字體表 (4,808, `moe_4808.tsv`, from Wikisource and
+checked against the MOE's PDF; the README has the source and licence) and of
+level 1 of 通用规范汉字表 (3,500, the last column of `hanzi_order.tsv`),
+sorted by radical so a round draws whole families. A `-` in a column means
+that script has nothing to draw on that row. `merge_round.py` keeps the
+README's "Drawn so far" line for both lists. Any new list needs its source
+and licence checked and recorded in the README first.

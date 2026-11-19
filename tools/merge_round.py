@@ -24,10 +24,12 @@ b, n = re.subn(r'^VERSION = [0-9.]+(\s+#)', f'VERSION = {version}\\1', bp.read_t
 assert n == 1, 'VERSION line not found'
 bp.write_text(b, encoding='utf-8')
 
-# Count in a fresh interpreter: hanzi_strokes has just changed on disk.
-count = int(subprocess.check_output(
-    [sys.executable, '-c', "import hanzi_strokes as h; print(sum('\\u3400' <= c <= '\\u9fff' for c in h.C))"],
-    cwd=R, text=True))
+# Count in a fresh interpreter: hanzi_strokes has just changed on disk. Only the
+# rows' own characters count: the README lists apart the ones drawn from past
+# the lists.
+have = set(subprocess.check_output(
+    [sys.executable, '-c', "import hanzi_strokes as h; print(''.join(h.C))"], cwd=R, text=True))
+count = sum(c in have for c in _repo.chars_of(1, rows))
 order = _repo.rows()
 cover = sum(int(r[1]) for r in order[:rows]) / sum(int(r[1]) for r in order) * 100
 # Whole percents, but never round up to 100: past 99.5, one decimal.

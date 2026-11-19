@@ -36,7 +36,10 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
    draw a turn as two items or two strokes as one (糸's 幺, 凵): see which with
    `tools/hz_strokes.py work/p.jpg NAMES`, which numbers each stroke. A part
    built from the wrong part is a real one: 番 had 采 (爫 over 木) where its top
-   is 釆 (丿 over 米); 宿 added 百's 丿 to 白, which has its own. Where the
+   is 釆 (丿 over 米); 宿 added 百's 丿 to 白, which has its own. A font
+   only shows a form's look; for a stroke's kind and order read the standard
+   (通用规范汉字笔顺规范 for Simplified): read off a font, 尧's third stroke
+   went in as a 點 where the standard has a 撇. Where the
    教育部 字樣說明 gives another count for a Traditional form, follow it. Give a
    Traditional character Taiwan's form of every part, a Simplified one the
    mainland's: 䍃 is `K['䍃TW']` (𠂊 and a dot) in 搖 謠 瑤, `K['䍃']` (爫) in

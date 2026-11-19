@@ -38,9 +38,9 @@
 
 | | Pen | Latin | Chinese |
 | --- | --- | --- | --- |
-| **印泥**&nbsp;**Yinni**<br><sub>the Typewriter</sub> | A round pen with slab serifs, struck through an inked ribbon | Monospaced, one width for every glyph; the zero has a dot. Draws a terminal's box drawing, blocks and Powerline separators. | 仿宋 metal type, after the Chinese typewriter's slugs. Two cells wide. |
-| **畫沙**&nbsp;**Huasha**<br><sub>the Ballpoint</sub> | A fine round pen leaning about 9° | Handwriting: three drawings of every lowercase letter take turns, so words read as written, not set. | A hand's 楷書: pressure that comes and goes, each stroke a little off its place. |
-| **漏痕**&nbsp;**Louhen**<br><sub>the Marker</sub> | A chisel nib held at 35° | Upright handwriting, thick on the downstrokes and thin across, with the same alternates. | Thick and thin from the nib, as in its Latin. |
+| **Yinni**<br>印泥<br><sub>the Typewriter</sub> | A round pen with slab serifs, struck through an inked ribbon | Monospaced, one width for every glyph; the zero has a dot. Draws a terminal's box drawing, blocks and Powerline separators. | 仿宋 metal type, after the Chinese typewriter's slugs. Two cells wide. |
+| **Huasha**<br>畫沙<br><sub>the Ballpoint</sub> | A fine round pen leaning about 9° | Handwriting: three drawings of every lowercase letter take turns, so words read as written, not set. | A hand's 楷書: pressure that comes and goes, each stroke a little off its place. |
+| **Louhen**<br>漏痕<br><sub>the Marker</sub> | A chisel nib held at 35° | Upright handwriting, thick on the downstrokes and thin across, with the same alternates. | Thick and thin from the nib, as in its Latin. |
 
 The full names are 一粟印泥 Yisu Yinni, 一粟畫沙 Yisu Huasha and 一粟漏痕 Yisu Louhen; a Chinese menu lists the Chinese ones. Each family has a **Regular** and a **Bold**, style-linked, so an app's Bold button picks the real Bold.
 

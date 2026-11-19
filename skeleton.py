@@ -344,9 +344,10 @@ CARON_STEM = {'d': 390, 'l': 160, 't': 190, 'L': 110}
 # Marks over an ascender centre on its stem, not on the letter's body.
 MARK_X = {('h', 'circumflex'): 150, ('L', 'acute'): 190}
 
-# Spacing (legacy) accents: the same marks standing alone.
+# Spacing (legacy) accents: the same marks standing alone. ˇ and ˙ are
+# Zhuyin's third tone and neutral tone, drawn with the Chinese (hanzi_strokes.py).
 SPACING_MARKS = {'¨': 'dieresis', '´': 'acute', '¯': 'macron', '¸': 'cedilla',
-                 'ˆ': 'circumflex', '˜': 'tilde', 'ˇ': 'caron', '˘': 'breve', '˙': 'dotaccent',
+                 'ˆ': 'circumflex', '˜': 'tilde', '˘': 'breve',
                  '˚': 'ring', '˛': 'ogonek', '˝': 'hungarumlaut'}
 
 

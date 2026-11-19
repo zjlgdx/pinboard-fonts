@@ -38,11 +38,11 @@
 
 | | Pen | Latin | Chinese |
 | --- | --- | --- | --- |
-| **一粟印泥 Yisu Yinni**<br>the Typewriter | A round pen with slab serifs, struck through an inked ribbon | Monospaced, one width for every glyph; the zero has a dot. Draws a terminal's box drawing, blocks and Powerline separators. | 仿宋 metal type, after the Chinese typewriter's slugs. Two cells wide. |
-| **一粟畫沙 Yisu Huasha**<br>the Ballpoint | A fine round pen leaning about 9° | Handwriting: three drawings of every lowercase letter take turns, so words read as written, not set. | A hand's 楷書: pressure that comes and goes, each stroke a little off its place. |
-| **一粟漏痕 Yisu Louhen**<br>the Marker | A chisel nib held at 35° | Upright handwriting, thick on the downstrokes and thin across, with the same alternates. | Thick and thin from the nib, as in its Latin. |
+| **印泥**&nbsp;**Yinni**<br><sub>the Typewriter</sub> | A round pen with slab serifs, struck through an inked ribbon | Monospaced, one width for every glyph; the zero has a dot. Draws a terminal's box drawing, blocks and Powerline separators. | 仿宋 metal type, after the Chinese typewriter's slugs. Two cells wide. |
+| **畫沙**&nbsp;**Huasha**<br><sub>the Ballpoint</sub> | A fine round pen leaning about 9° | Handwriting: three drawings of every lowercase letter take turns, so words read as written, not set. | A hand's 楷書: pressure that comes and goes, each stroke a little off its place. |
+| **漏痕**&nbsp;**Louhen**<br><sub>the Marker</sub> | A chisel nib held at 35° | Upright handwriting, thick on the downstrokes and thin across, with the same alternates. | Thick and thin from the nib, as in its Latin. |
 
-Each family has a **Regular** and a **Bold**, style-linked, so an app's Bold button picks the real Bold. Each has a Chinese name too, for a Chinese menu.
+The full names are 一粟印泥 Yisu Yinni, 一粟畫沙 Yisu Huasha and 一粟漏痕 Yisu Louhen; a Chinese menu lists the Chinese ones. Each family has a **Regular** and a **Bold**, style-linked, so an app's Bold button picks the real Bold.
 
 ## What's in them
 
@@ -57,7 +57,7 @@ Each family has a **Regular** and a **Bold**, style-linked, so an app's Bold but
 
 Not yet: Greek, Cyrillic, Vietnamese as precomposed letters, and Chinese past the lists above. Text the fonts don't have falls back to another font.
 
-![Yisu Huasha, Louhen and Yinni: spacing strings, kerning pairs, accented letters, symbols, Bold, and Yinni as a terminal](docs/specimen.png)
+<img src="docs/specimen.png" width="720" alt="Yisu Huasha, Louhen and Yinni: spacing strings, kerning pairs, accented letters, symbols, Bold, and Yinni as a terminal">
 
 ## Install
 

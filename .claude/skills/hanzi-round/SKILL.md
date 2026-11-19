@@ -29,6 +29,12 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
    three pens, and the Ballpoint large). Fix what looks wrong and look again.
 5. Draw each in its own standard's form: 教育部 standard forms for
    Traditional, 通用规范汉字表 for Simplified.
+6. Before drawing one, check its parts and stroke count against Unihan
+   (`kTotalStrokes` in `Unihan_IRGSources.txt`, `kRSUnicode`). Where the
+   教育部 字樣說明 gives another count for a Traditional form, follow it. Give a
+   Traditional character Taiwan's form of every part, a Simplified one the
+   mainland's: 䍃 is `K['䍃TW']` (𠂊 and a dot) in 搖 謠 瑤, `K['䍃']` (爫) in
+   谣 瑶; 糸, 言, 貝 against 纟, 讠, 贝.
 
 ### What goes wrong, and the fix
 
@@ -45,6 +51,18 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   the Marker (懼's 瞿 did this). Start at 30, or the rect at 40–50.
 - **Stacked parts crowd.** 疊, 寧, 憋 needed their top parts smaller and the
   lower ones given more of the height.
+- **A part boxed twice shrinks.** `K['髟']` drew its 镸 on the left of the
+  grid and then boxed it into the left half again, so 鬆 髭 鬢 got a 镸 a
+  quarter wide. Before boxing a part into part of the frame, look where its
+  ink already sits.
+- **A shared part's mistake spreads.** 豕 lacked its short right 丿, 罙 took
+  穴's dot, 龠 lacked the 一 under 人, 奥 closed its 冂 and lost 米's lower
+  strokes: each was found when a new character used the part and its count
+  came out wrong. Count the part itself and fix it where it is defined: a
+  `work/rLAST_fix.py` whose definitions replace the old ones in place at
+  merge, and a before/after sheet of every character that uses the part.
+- **Look-alike parts are different characters.** 夐 ends in 夂 (14 strokes,
+  觼); 敻 ends in 攵 (15, 瓊). Check the code point, not the look.
 - **A shell pipe can mangle the characters.** `grep | cut -c` on macOS cuts
   bytes, not characters; pull a batch's characters out with Python.
   `edges.py` fails when none of `--chars` is drawn, so a mangled list can't
@@ -127,6 +145,9 @@ Check, proof and ship them in order.
   you removed.
 - Once a PR merges, merge `origin/main` into the next branch (a merge commit;
   never rebase a branch others stack on), then run `check_fonts.py` there.
+- Drafting the next round while one builds: load the earlier round's batches
+  and fix file first, in every tool's batch list
+  (`r5184_1.py,…,r5184_fix.py,r5364_1.py`), so the new batches use its parts.
 - Other work can ship while a stack builds. Before opening a PR, look at
   main's `VERSION` and the latest tag: 0.730 was once taken by another
   branch's release while a round built as 0.730, and the round merged with no

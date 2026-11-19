@@ -24,11 +24,11 @@ gitleaks git --no-banner --log-opts="origin/main..HEAD"
 git push -q -u origin "$BR"
 fixline=""
 [ -n "$FIX" ] && fixline=$'\n'"- $FIX"
-body="Rows ${FIRST}–${LAST} of \`hanzi_order.tsv\`, in the Typewriter, the Ballpoint and the Marker, Simplified and Traditional together.
+body="Rows ${FIRST}–${LAST} of \`hanzi_order.tsv\`, in Yisu Yinni, Huasha and Louhen, Simplified and Traditional together.
 
 - Every character in the first ${LAST} rows is drawn: ${COUNT} hanzi in all (${NEW} new), ${PCT}% of the corpus.${fixline}
 - Version ${V}. \`tools/edges.py\` and the build report no glyph cut off.
-- Checks (\`tools/check_fonts.py\`): OTS passes on all six fonts, \`fontbakery check-universal\` has no FAIL but the known one, \`massive-font\` on fonts past 9 MB (the README says why), and the known warnings (\`file_size\`; the Typewriter's \`xAvgCharWidth\` and CFF \`glyf\` check), and no personal data.
+- Checks (\`tools/check_fonts.py\`): OTS passes on all six fonts, \`fontbakery check-universal\` has no FAIL but the known one, \`massive-font\` on fonts past 9 MB (the README says why), and the known warnings (\`file_size\`; Yinni's \`xAvgCharWidth\` and CFF \`glyf\` check), and no personal data.
 
 Closes #${ISSUE}
 

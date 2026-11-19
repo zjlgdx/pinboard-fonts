@@ -148,6 +148,12 @@ Check, proof and ship them in order.
 - Drafting the next round while one builds: load the earlier round's batches
   and fix file first, in every tool's batch list
   (`r5184_1.py,…,r5184_fix.py,r5364_1.py`), so the new batches use its parts.
+- Other work can ship while a stack builds. Before opening a PR, look at
+  main's `VERSION` and the latest tag: 0.730 was once taken by another
+  branch's release while a round built as 0.730, and the round merged with no
+  release of its own. `open_pr.sh` now refuses a version main has reached or
+  a tag has; take the next free one. If main gained glyph changes, the fonts
+  you built lack them: rebuild after merging.
 - A worktree has no `work/`: write its proof into the main checkout's
   (`round_proof.py FIRST LAST /path/to/fontkit/work/proofV.jpg`).
   `release.sh` finds the main checkout's `.venv` and fetches the tags itself.

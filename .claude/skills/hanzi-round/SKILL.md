@@ -37,6 +37,13 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
    Traditional character Taiwan's form of every part, a Simplified one the
    mainland's: 䍃 is `K['䍃TW']` (𠂊 and a dot) in 搖 謠 瑤, `K['䍃']` (爫) in
    谣 瑶; 糸, 言, 貝 against 纟, 讠, 贝.
+7. A character both scripts write (花 草 者 偏, and 著 藉, which 通用规范汉字表
+   has too) is drawn in Taiwan's form: `K['艹T']` (十十), `K['者T']`,
+   `K['敖T']`, `K['戶']`. Add it to `_SHARED_TW` at the end of
+   `hanzi_strokes.py`, which gives it the mainland's form for text tagged
+   Simplified Chinese. A Simplified-only character built on a shared one
+   draws `_mainland(C['苗'])`. `tools/hz_forms.py` checks both, and
+   `check_fonts.py` runs it.
 
 ### What goes wrong, and the fix
 

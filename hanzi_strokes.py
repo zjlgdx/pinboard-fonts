@@ -9707,6 +9707,9 @@ _SHARED_TW = ('都者花房苦草落懂模菜哎遍摸英篇范警茶若菌慌�
                '聱肇艾芋芍芙芟芥芬芭芳芹苑苒苓苔苛苜苞苟苣茉茗茬茱茴茵茹荀荏荸荻荼莉莎莒莓莘莞莠莽菁菅菠菰菱菲菴菸菽萃萋萌萍萎萱萸萼葛董'
                '葩蒂蒐蒲蒿蓆蓉蓓蓿蔓蔚蔡蕃蕈蕊蕙蕨蕾薇薛薜薰藐藕藩藻蘗蟒褚赭遨鼇甍噶擭暱棻楛楮檠歎濩箸芣芰芷芸芾苯茆茨荃莆菔菟葆葭蓊蓑蔆'
                '蕞薨薹褊褡')
+# 著 藉 苧 棨 are on the Traditional side of their rows (着 借 苎) or past them,
+# but 通用规范汉字表 has them too. tools/hz_forms.py checks this list.
+_SHARED_TW += '著藉苧棨'
 ZHS.update({ch: _mainland(C[ch]) for ch in _SHARED_TW})
 
 # In a column, mainland China sets all seven marks 置于相应文字之下偏右

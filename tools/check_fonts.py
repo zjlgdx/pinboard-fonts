@@ -8,6 +8,7 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
 - fontbakery check-universal, per family, has no FAIL or FATAL but the known
   ones (its full report goes to OUT_DIR/fontbakery-FAMILY.txt, one file per
   checkout, so checks can run side by side);
+- each shared character's Simplified form is there (tools/hz_forms.py);
 - no personal data: emails, home or temp paths, or anything --private matches
   (or the YISU_PRIVATE environment variable), wherever text can live in
   the .otf and .woff2 files: every table but the outlines, the decoded name
@@ -137,6 +138,10 @@ for f in files:
 print('  hits:', ', '.join(hits) or 'none', f'({len(files)} files)')
 if hits:
     bad.append('personal data in ' + ', '.join(hits))
+
+print('== forms (tools/hz_forms.py)', flush=True)
+if subprocess.run([sys.executable, str(Path(__file__).parent / 'hz_forms.py')]).returncode:
+    bad.append('forms')
 
 print('== ' + ('FAILED: ' + '; '.join(bad) if bad else 'all passed'))
 sys.exit(1 if bad else 0)

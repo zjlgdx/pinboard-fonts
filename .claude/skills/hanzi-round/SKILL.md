@@ -127,6 +127,12 @@ Check, proof and ship them in order.
   you removed.
 - Once a PR merges, merge `origin/main` into the next branch (a merge commit;
   never rebase a branch others stack on), then run `check_fonts.py` there.
+- Other work can ship while a stack builds. Before opening a PR, look at
+  main's `VERSION` and the latest tag: 0.730 was once taken by another
+  branch's release while a round built as 0.730, and the round merged with no
+  release of its own. `open_pr.sh` now refuses a version main has reached or
+  a tag has; take the next free one. If main gained glyph changes, the fonts
+  you built lack them: rebuild after merging.
 - A worktree has no `work/`: write its proof into the main checkout's
   (`round_proof.py FIRST LAST /path/to/fontkit/work/proofV.jpg`).
   `release.sh` finds the main checkout's `.venv` and fetches the tags itself.

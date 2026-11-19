@@ -12,6 +12,12 @@ BR=$(git branch --show-current)
 V=$(sed -nE 's/^VERSION = ([0-9.]+).*/\1/p' build.py)
 read -r COUNT PCT < <(sed -nE 's/.*The first [0-9,]+ rows are ([0-9,]+) characters across both scripts, and cover ([0-9.]+)% of the corpus.*/\1 \2/p' README.md | tr -d ,)
 git fetch -q origin main
+# Another branch may have shipped this version while this one was building.
+MV=$(git show origin/main:build.py | sed -nE 's/^VERSION = ([0-9.]+).*/\1/p')
+if [ -n "$(git ls-remote --tags origin "refs/tags/v$V")" ] || ! python3 -c "import sys; sys.exit(not $V > $MV)"; then
+  echo "version $V is taken (main is at $MV, or v$V is tagged): merge origin/main and set a higher VERSION" >&2
+  exit 1
+fi
 BEFORE=$(git show origin/main:README.md | sed -nE 's/.*rows are ([0-9,]+) characters across both scripts.*/\1/p' | tr -d ,)
 NEW=$((COUNT - BEFORE))
 gitleaks git --no-banner --log-opts="origin/main..HEAD"

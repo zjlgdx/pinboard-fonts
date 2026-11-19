@@ -1,6 +1,6 @@
 ---
 name: hanzi-round
-description: Draw the next rows of hanzi_order.tsv into the Pinboard fonts and ship them as a release — draft batches, edge check, merge, build, checks, proof, pull request, release. Use for a Chinese round or a milestone of them ("do the next 200 rows", "繼續處理下一批", an issue titled "Chinese rows A–B"). Not for Latin, symbols or the build's pens.
+description: Draw the next rows of hanzi_order.tsv into the 一粟 (Yisu) fonts and ship them as a release — draft batches, edge check, merge, build, checks, proof, pull request, release. Use for a Chinese round or a milestone of them ("do the next 200 rows", "繼續處理下一批", an issue titled "Chinese rows A–B"). Not for Latin, symbols or the build's pens.
 ---
 
 # A Chinese round
@@ -81,7 +81,7 @@ percents but one decimal past 99.5, so it never shows 100%.
 
 `check_fonts.py` fails on a stale font, an OTS failure, a fontbakery FAIL, or
 anything that looks personal (add your own name with `--private` or
-`PINBOARD_PRIVATE`). The known results, explained in the README, are printed
+`YISU_PRIVATE`). The known results, explained in the README, are printed
 but pass: file size (the WARN past 1 MB, and `massive-font`'s FAIL past 9 MB,
 marked `(known)`), and in the Typewriter fontbakery's CFF `glyf` error and the
 double-width `xAvgCharWidth`. A new FAIL code is fixed, or explained in the
@@ -127,6 +127,12 @@ Check, proof and ship them in order.
   you removed.
 - Once a PR merges, merge `origin/main` into the next branch (a merge commit;
   never rebase a branch others stack on), then run `check_fonts.py` there.
+- Other work can ship while a stack builds. Before opening a PR, look at
+  main's `VERSION` and the latest tag: 0.730 was once taken by another
+  branch's release while a round built as 0.730, and the round merged with no
+  release of its own. `open_pr.sh` now refuses a version main has reached or
+  a tag has; take the next free one. If main gained glyph changes, the fonts
+  you built lack them: rebuild after merging.
 - A worktree has no `work/`: write its proof into the main checkout's
   (`round_proof.py FIRST LAST /path/to/fontkit/work/proofV.jpg`).
   `release.sh` finds the main checkout's `.venv` and fetches the tags itself.

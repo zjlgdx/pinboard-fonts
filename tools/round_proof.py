@@ -22,14 +22,14 @@ a = ap.parse_args()
 fonts = Path(a.fonts)
 
 new = _repo.chars_of(a.first, a.last)
-fams = [(f'Pinboard{n}-{w}', n, w) for n in ('Typewriter', 'Ballpoint', 'Marker') for w in ('Regular', 'Bold')]
-cmap = TTFont(fonts / 'PinboardBallpoint-Regular.otf').getBestCmap()
+fams = [(f'Yisu{s}-{w}', n, w) for s, n in (('Yinni', 'Typewriter'), ('Huasha', 'Ballpoint'), ('Louhen', 'Marker')) for w in ('Regular', 'Bold')]
+cmap = TTFont(fonts / 'YisuHuasha-Regular.otf').getBestCmap()
 miss = [c for c in a.hant + a.hans + ''.join(new) if c.strip() and ord(c) not in cmap]
 if miss:
     sys.exit('not in the fonts: ' + ''.join(miss))
 
 INK, PAPER, LABEL = '#2b3a55', '#f7f1e3', '#a5683c'
-lab = ImageFont.truetype(str(fonts / 'PinboardTypewriter-Regular.otf'), 20)
+lab = ImageFont.truetype(str(fonts / 'YisuYinni-Regular.otf'), 20)
 SZ, COLS, G = 46, 24, 58
 W = max(60 + COLS * G, 1800)
 H = 40 + len(fams) * 2 * 64 + 60 + -(-len(new) // COLS) * G + 40
@@ -46,7 +46,7 @@ for stem, n, w in fams:
 y += 20
 d.text((30, y), f'rows {a.first}-{a.last}: {len(new)} characters, Ballpoint Regular', fill=LABEL, font=lab)
 y += 40
-f = ImageFont.truetype(str(fonts / 'PinboardBallpoint-Regular.otf'), SZ)
+f = ImageFont.truetype(str(fonts / 'YisuHuasha-Regular.otf'), SZ)
 for i, ch in enumerate(new):
     d.text((30 + (i % COLS) * G, y + (i // COLS) * G), ch, fill=INK, font=f)
 img.save(a.out, quality=88)

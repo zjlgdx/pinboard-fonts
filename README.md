@@ -1,12 +1,14 @@
-# Pinboard fonts
+# 一粟 Yisu fonts
 
-Three fonts drawn for [Pinboard](https://github.com/zjlgdx/claude-theme-pinboard), a cork-board theme for Claude: **Ballpoint**, **Marker** and **Typewriter**. All three come from one set of letter skeletons (`skeleton.py`), each written with a different pen.
+Three fonts drawn a stroke at a time: **一粟印泥 Yisu Yinni**, the Typewriter; **一粟畫沙 Yisu Huasha**, the Ballpoint; and **一粟漏痕 Yisu Louhen**, the Marker. 一粟, one grain of millet, is from 蘇軾's 《前赤壁賦》 (渺滄海之一粟); the pens are named for calligraphy's three images of a stroke, 如印印泥, 如錐畫沙 and 如屋漏痕. All three come from one set of letter skeletons (`skeleton.py`), each written with a different pen. See them write at [yisu.aixie.de](https://yisu.aixie.de).
 
-![Pinboard Ballpoint, Marker and Typewriter: spacing strings, kerning pairs, accented letters, symbols, Bold, and the Typewriter as a terminal](docs/specimen.png)
+They were drawn for [Pinboard](https://github.com/zjlgdx/claude-theme-pinboard), a cork-board theme for Claude, and up to 0.730 were called the Pinboard fonts: Pinboard Typewriter, Pinboard Ballpoint and Pinboard Marker. From 0.740 the families, the files and this repository (formerly `pinboard-fonts`) carry the new names; a menu in Chinese lists the Chinese ones.
 
-- **Ballpoint**: a fine round pen leaning about 9°. Three drawings of every lowercase letter take turns, so the words read as written, not set.
-- **Marker**: a chisel nib held at 35°, thick on the downstrokes and thin across. Upright, with the same alternates.
-- **Typewriter**: the same letters with slab serifs, one width for every glyph, struck through an inked ribbon. The zero has a dot.
+![Yisu Huasha, Louhen and Yinni (the Ballpoint, Marker and Typewriter): spacing strings, kerning pairs, accented letters, symbols, Bold, and the Typewriter as a terminal](docs/specimen.png)
+
+- **畫沙 Huasha, the Ballpoint**: a fine round pen leaning about 9°. Three drawings of every lowercase letter take turns, so the words read as written, not set.
+- **漏痕 Louhen, the Marker**: a chisel nib held at 35°, thick on the downstrokes and thin across. Upright, with the same alternates.
+- **印泥 Yinni, the Typewriter**: the same letters with slab serifs, one width for every glyph, struck through an inked ribbon. The zero has a dot.
 
 Each family comes in **Regular** and **Bold**, style-linked, so an app's Bold button picks the real Bold instead of thickening the Regular.
 
@@ -44,15 +46,15 @@ The corpus list ends at row 2,849. After it, with a count of 0, come the charact
 
 Past both lists, a character is drawn when a text set in the fonts needs it. There are 26 so far, in their Traditional forms: `禊 暎 俛` for 王羲之's 《蘭亭集序》, `蜉 蝣` for 蘇軾's 《前赤壁賦》, and `軫 棨 襜 驂 騑 闥 甍 紆 舸 舳 鶩 遄 睢 鄴 睇 眄 溟 閽 愨 笏 滕` for 王勃's 《滕王閣序》. Five of them, `甍 紆 睢 鄴 滕`, are in Big5 and so are also rows past 4,823, drawn ahead of their round; the rest are not rows of `hanzi_order.tsv`. The rows' count above leaves all 26 out until a round reaches them.
 
-Chinese is being drawn a slice at a time (see the [milestones](https://github.com/zjlgdx/pinboard-fonts/milestones)). Until a character is drawn here, a terminal shows it in a system font. Releases 0.430 and 0.431 had a terminal build, Pinboard Typewriter NF CN, with Chinese and icons merged in from LXGW WenKai and Nerd Fonts; it is retired, so that everything in these fonts is drawn here.
+Chinese is being drawn a slice at a time (see the [milestones](https://github.com/zjlgdx/yisu-fonts/milestones)). Until a character is drawn here, a terminal shows it in a system font. Releases 0.430 and 0.431 had a terminal build, Pinboard Typewriter NF CN, with Chinese and icons merged in from LXGW WenKai and Nerd Fonts; it is retired, so that everything in these fonts is drawn here.
 
 ## Use the fonts
 
-Download the fonts from the [latest release](https://github.com/zjlgdx/pinboard-fonts/releases/latest): `.otf` for installing, `.woff2` for the web. Up to 0.510 they were committed in `out/` too; from 0.520 they're only on Releases, which keeps the repository small. To build them yourself, see below. On a Mac, double-click an `.otf` and choose Install Font. Install both weights of a family.
+Download the fonts from the [latest release](https://github.com/zjlgdx/yisu-fonts/releases/latest): `.otf` for installing, `.woff2` for the web. Up to 0.510 they were committed in `out/` too; from 0.520 they're only on Releases, which keeps the repository small. To build them yourself, see below. On a Mac, double-click an `.otf` and choose Install Font. Install both weights of a family.
 
 ```css
-@font-face { font-family: 'Pinboard Ballpoint'; src: url(PinboardBallpoint-Regular.woff2) format('woff2'); font-weight: 400; }
-@font-face { font-family: 'Pinboard Ballpoint'; src: url(PinboardBallpoint-Bold.woff2) format('woff2'); font-weight: 700; }
+@font-face { font-family: 'Yisu Huasha'; src: url(YisuHuasha-Regular.woff2) format('woff2'); font-weight: 400; }
+@font-face { font-family: 'Yisu Huasha'; src: url(YisuHuasha-Bold.woff2) format('woff2'); font-weight: 700; }
 ```
 
 ## Build them
@@ -109,7 +111,7 @@ Two scripts serve the Pinboard theme. Each reads the words to draw as JSON on st
 | Outer contours counter-clockwise, no overlaps, points at extremes | potrace gives non-overlapping, correctly wound contours, and box-drawing pieces are merged into one outline. `ExtremaPen` splits every curve at its extremes. No contour is under 400 units²: a counter the Bold pen all but closes is filled. | [Adobe Type 1 spec §3.5, §4.1](https://adobe-type-tools.github.io/font-tech-notes/pdfs/T1_SPEC.pdf), [Glyphs: drawing good paths](https://glyphsapp.com/learn/drawing-good-paths) |
 | Vertical metrics | `USE_TYPO_METRICS` is on, hhea equals typo, line gap 0. The line is 1.24 em with the caps centred in it, the same in both weights. The typo ascender clears `À`. The win metrics are the family's bounds. The underscore hangs 40 units under the baseline, clear of round letters' overshoot whatever the pen, and the Regular's underscore gives both weights their underline. | [Google Fonts: vertical metrics](https://googlefonts.github.io/gf-guide/metrics.html), [OpenType: OS/2](https://learn.microsoft.com/en-us/typography/opentype/spec/os2) |
 | x-height and cap height | Measured from the flat tops of x (z for Ballpoint) and H, whose feet stand on the baseline, so each is the ink's full height. | [OpenType: OS/2](https://learn.microsoft.com/en-us/typography/opentype/spec/os2) |
-| Names and versions | Windows names only, IDs 1–6 plus 13/14 for the OFL. head.fontRevision matches nameID 5. post is 3.0, as CFF fonts use. | [OpenType: name](https://learn.microsoft.com/en-us/typography/opentype/spec/name), [recommendations](https://learn.microsoft.com/en-us/typography/opentype/spec/recom) |
+| Names and versions | Windows names only: IDs 0–6, 11 for the repository and 13/14 for the OFL. IDs 1 and 4 also in Chinese: Traditional for zh-TW, zh-HK and zh-MO, Simplified for zh-CN and zh-SG. head.fontRevision matches nameID 5. post is 3.0, as CFF fonts use. | [OpenType: name](https://learn.microsoft.com/en-us/typography/opentype/spec/name), [recommendations](https://learn.microsoft.com/en-us/typography/opentype/spec/recom) |
 | Slanted handwriting | Ballpoint leans 9° as part of the hand, as other script fonts do. It stays a Regular with italicAngle 0, so it needs no upright partner. | Fontbakery `italic_angle` |
 
 The handwriting fonts carry two alternates of every lowercase letter, accented ones included, cycled by `calt`. In "bookkeeper" the two o's, the two k's and the e's are each drawn differently.

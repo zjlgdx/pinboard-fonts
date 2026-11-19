@@ -11,7 +11,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
-FAMILIES = ['PinboardBallpoint', 'PinboardMarker', 'PinboardTypewriter']
+FAMILIES = ['YisuHuasha', 'YisuLouhen', 'YisuYinni']
 SIZE = 40
 # Spacing strings, kerning pairs, alternates, then the wider character set.
 LINES = ['nnnonnnoonnn HHHOHHHOOHHH 000100 hamburgefonstiv',
@@ -39,7 +39,7 @@ def main():
     css = ''.join(f"@font-face{{font-family:'{f.stem}';src:url({f.name})}}" for f in sorted(OUT.glob('*.woff2')))
     body, rows = '', 0
     for fam in FAMILIES:
-        lines = LINES + (TERMINAL if fam.endswith('Typewriter') else [])
+        lines = LINES + (TERMINAL if fam == 'YisuYinni' else [])   # the Typewriter
         body += '<div>' + ''.join(para(l, fam) for l in lines) + para(BOLD, fam, bold=True) + '</div>'
         rows += len(lines) + 1
     page = OUT / 'sheet.html'

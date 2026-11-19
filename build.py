@@ -1,4 +1,4 @@
-"""Build Pinboard's fonts from the pen skeletons in skeleton.py.
+"""Build the 一粟 (Yisu) fonts from the pen skeletons in skeleton.py.
 
 Each glyph's centre line is written with a pen on a large bitmap, traced
 back to curves with potrace, spaced from its own shape, kerned, and
@@ -81,7 +81,7 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.730         # head.fontRevision; nameID 5 says the same
+VERSION = 0.740         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -386,7 +386,8 @@ class Style:
 
 
 class Ballpoint(Style):
-    family = 'Pinboard Ballpoint'
+    family = 'Yisu Huasha'        # 畫沙: 如錐畫沙
+    family_zh = ('一粟畫沙', '一粟画沙')
     key = 'ballpoint'
     alternates = 2
     # Degrees of lean, part of the handwriting as in other script fonts: the
@@ -430,7 +431,8 @@ class Ballpoint(Style):
 
 
 class Marker(Style):
-    family = 'Pinboard Marker'
+    family = 'Yisu Louhen'        # 漏痕: 如屋漏痕
+    family_zh = ('一粟漏痕', '一粟漏痕')
     key = 'marker'
     alternates = 2
     lean = 0
@@ -487,7 +489,8 @@ SERIF = re.compile(r'M(-?[\d.]+) (-?[\d.]+) L(-?[\d.]+) (-?[\d.]+)')
 
 
 class Typewriter(Style):
-    family = 'Pinboard Typewriter'
+    family = 'Yisu Yinni'         # 印泥: 如印印泥
+    family_zh = ('一粟印泥', '一粟印泥')
     key = 'typewriter'
     mono = True
     alternates = 0
@@ -1291,11 +1294,18 @@ def make(style, shared=None):
         'fullName': f'{family} {style.weight}',
         'psName': ps,
         'version': f'Version {VERSION:.3f}',
-        'copyright': 'Copyright 2026 The Pinboard Fonts Project Authors (https://github.com/zjlgdx/pinboard-fonts)',
-        'vendorURL': 'https://github.com/zjlgdx/pinboard-fonts',
+        'copyright': 'Copyright 2026 The Yisu Fonts Project Authors (https://github.com/zjlgdx/yisu-fonts)',
+        'vendorURL': 'https://github.com/zjlgdx/yisu-fonts',
         'licenseDescription': 'This Font Software is licensed under the SIL Open Font License, Version 1.1.',
         'licenseInfoURL': 'https://openfontlicense.org',
     }, mac=False)
+    # The family's Chinese name, Traditional for Taiwan, Hong Kong and Macao,
+    # Simplified for the mainland and Singapore (Windows language IDs), so a
+    # font menu in Chinese lists 一粟印泥 and any other lists Yisu Yinni.
+    hant, hans = style.family_zh
+    for lang, zh in ((0x0404, hant), (0x0C04, hant), (0x1404, hant), (0x0804, hans), (0x1004, hans)):
+        fb.font['name'].setName(zh, 1, 3, 1, lang)
+        fb.font['name'].setName(f'{zh} {style.weight}', 4, 3, 1, lang)
     # The underline is the Regular's underscore in both weights: apps draw
     # one underline for a family, and fontbakery expects it to match.
     if 'underline' not in shared:

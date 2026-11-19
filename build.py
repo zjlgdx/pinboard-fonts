@@ -81,7 +81,7 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.700         # head.fontRevision; nameID 5 says the same
+VERSION = 0.710         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -931,8 +931,16 @@ def mark_features(glyphs, anchors):
     fea += ['} mark;', 'feature mkmk {']
     for n in marks:
         for c, p in anchors[n][1].items():
-            fea.append(f'  pos mark {n} {anchor(p)} mark @{c};')
-    fea += ['} mkmk;',
+            if c == 'top':
+                fea.append(f'  pos mark {n} {anchor(p)} mark @{c};')
+    # A comma below hangs under the mark below before it, whatever marks
+    # above come between them.
+    fea += ['  lookup mkmk_below {', '    lookupflag UseMarkFilteringSet @below_marks;']
+    for n in below:
+        for c, p in anchors[n][1].items():
+            if c == 'bottom':
+                fea.append(f'    pos mark {n} {anchor(p)} mark @{c};')
+    fea += ['  } mkmk_below;', '} mkmk;',
             f'table GDEF {{ GlyphClassDef [{" ".join(bases)}], , [{" ".join(marks)}], ; }} GDEF;']
     return fea
 

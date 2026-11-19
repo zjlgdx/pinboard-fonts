@@ -658,14 +658,17 @@ def mark_parts(ch, reach, ring, hook, case):
 
 
 def mark_anchors(ch, reach, ring=50, hook=1.0, case=False):
-    """A combining mark's own anchor (where it attaches), and for a mark
-    above, the anchor the next mark stacks on: {class: (x, y)}, {class: (x, y)}."""
+    """A combining mark's own anchor (where it attaches), and the anchor the
+    next mark stacks on: above a mark above, or under a mark below for a comma
+    below (the one mark that attaches by `bottom`): {class: (x, y)}, {class: (x, y)}."""
     name = COMBINING_MARKS[ch]
     shape, x, y, line = mark_origin(name, 'H' if case else 'x', reach, ring, hook)
     own = {ANCHOR[name]: (x, line)}
     stack = {}
     if ANCHOR[name] == 'top':
         stack['top'] = (x, _stack_line(shape, y, reach, case))
+    else:
+        stack['bottom'] = (x, _stack_below(shape, y, reach, hook))
     return own, stack
 
 
@@ -675,6 +678,16 @@ def _stack_line(shape, y, reach, upper):
     a reach below that."""
     top = min(py for _x, py in _points(shape)) + y
     return top - STACK + 12 + (30 if upper else 40)
+
+
+def _stack_below(shape, y, reach, hook):
+    """The `line` for a comma below hung under this mark, so that its ink
+    starts STACK units under this one's: the comma's ink top sits `drop`
+    under its line."""
+    bottom = max(py for _x, py in _points(shape)) + y + reach
+    comma, _x, cy, cline = mark_origin('commabelow', 'x', reach, hook=hook)
+    drop = min(py for _x, py in _points(comma)) + cy - reach - cline
+    return bottom + STACK - drop
 
 
 def base_anchors(ch, reach, ring=50, hook=1.0):
@@ -699,6 +712,10 @@ def base_anchors(ch, reach, ring=50, hook=1.0):
         # Over a mark already there: stack on it.
         shape, x, y, _line = mark_origin(own, base, reach, ring, hook, d)
         out['top'] = (x, _stack_line(shape, y, reach, upper))
+    elif own in BELOW:
+        # Under a mark already there (ş ą ţ): a comma below hangs clear of it.
+        shape, _x, y, _line = mark_origin(own, base, reach, ring, hook, d)
+        out['bottom'] = (out['bottom'][0], _stack_below(shape, y, reach, hook))
     return out
 
 

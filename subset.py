@@ -24,7 +24,9 @@ for const, stem in FONTS.items():
     font = TTFont(OUT / f'{stem}-Regular.otf')
     opts = subset.Options()
     opts.flavor = 'woff2'
-    opts.layout_features = ['kern']     # kerning, but not the alternates: labels are short
+    # Kerning and the combining marks (ccmp's dotless i and .case marks, mark
+    # and mkmk's anchors), but not the alternates: labels are short.
+    opts.layout_features = ['kern', 'ccmp', 'mark', 'mkmk']
     opts.name_IDs = [1]
     # The board's SVG ignores hints; plain charstrings compress best.
     opts.hinting = False

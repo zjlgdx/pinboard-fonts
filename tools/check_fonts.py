@@ -2,6 +2,7 @@
 
 The checks before a pull request, on the built fonts in OUT_DIR (default out/):
 
+- all three families are there, Regular and Bold, as .otf and .woff2;
 - every font's head.fontRevision is build.py's VERSION (the fonts are fresh);
 - the OpenType Sanitizer passes every .otf;
 - fontbakery check-universal, per family, has no FAIL or FATAL but the known
@@ -9,8 +10,8 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
   checkout, so checks can run side by side);
 - no personal data: emails, home or temp paths, or anything --private matches
   (or the PINBOARD_PRIVATE environment variable), wherever text can live in
-  the .otf and .woff2 files: every table but the outlines, the CFF strings,
-  the glyph names, and the WOFF metadata.
+  the .otf and .woff2 files: every table but the outlines, the decoded name
+  records, the CFF strings, the glyph names, and the WOFF metadata.
 
 Exits 1 if any of them fails. The known results, which the README explains,
 are printed, not failed: file size (a WARN past 1 MB, and file_size's
@@ -33,6 +34,14 @@ a = ap.parse_args()
 out = Path(a.out)
 otfs = sorted(out.glob('*.otf'))
 bad = []
+
+# Every family in both weights and both formats: a partial build fails.
+FAMILIES = ('PinboardBallpoint', 'PinboardMarker', 'PinboardTypewriter')
+missing = [f'{fam}-{w}.{ext}' for fam in FAMILIES for w in ('Regular', 'Bold') for ext in ('otf', 'woff2')
+           if not (out / f'{fam}-{w}.{ext}').is_file()]
+print('== files', 'all 12' if not missing else 'missing ' + ', '.join(missing))
+if missing:
+    bad.append('missing ' + ', '.join(missing))
 
 from fontTools.ttLib import TTFont
 import ots
@@ -87,13 +96,16 @@ OUTLINES = {'CFF ', 'CFF2', 'glyf', 'gvar'}
 def text_of(path):
     """The bytes where text can live: every table but the outlines (random
     outline bytes can look like an email), the CFF's strings and the glyph
-    names, and a WOFF's metadata and private blocks."""
+    names, the name records decoded, and a WOFF's metadata and private blocks."""
     f = TTFont(path)
     parts = [f.reader[tag] for tag in f.reader.keys() if tag not in OUTLINES]
     if 'CFF ' in f:
         cff = f['CFF '].cff
         parts += [n.encode('latin-1', 'replace') for n in [*cff.fontNames, *cff.strings.strings]]
     parts += [n.encode('latin-1', 'replace') for n in f.getGlyphOrder()]
+    # Windows name records are UTF-16BE, which the byte pattern can't see.
+    if 'name' in f:
+        parts += [r.toUnicode(errors='replace').encode('utf-8') for r in f['name'].names]
     parts += [getattr(f.reader, b, None) or b'' for b in ('metaData', 'privData')]
     return b'\n'.join(parts)
 

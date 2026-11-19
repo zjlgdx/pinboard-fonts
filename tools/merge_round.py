@@ -68,4 +68,10 @@ r, n3 = re.subn(r"Drawn so far: [0-9,]+ of Taiwan's 4,808, [0-9,]+ of the first 
                 f" and {int(targets[2]):,} of Big5's 5,401.", r)
 assert n1 == 1 and n2 == 1 and n3 == 1, f'README sentences not found ({n1}, {n2}, {n3})'
 rd.write_text(r, encoding='utf-8')
+# The Chinese README gives the same count as the English one.
+zh = R / 'README.zh-Hant.md'
+z, n4 = re.subn(r'<!-- hanzi -->[0-9,]+<!-- /hanzi -->', f'<!-- hanzi -->{count:,}<!-- /hanzi -->',
+                zh.read_text(encoding='utf-8'))
+assert n4 == 1, 'README.zh-Hant.md count not found'
+zh.write_text(z, encoding='utf-8')
 print(f'rows {rows}, version {version}, {count} hanzi, {cover:.2f}% of the corpus, MOE {targets[0]}/4808, level 1 {targets[1]}/3500, Big5 {targets[2]}/5401')

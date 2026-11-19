@@ -22,7 +22,7 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 | `cells.py` | The Typewriter's box drawing, block elements and Powerline separators, drawn exactly to the 600-unit cell. |
 | `hanzi.py`, `hanzi_strokes.py` | Chinese: the stroke kinds, how the pen moves along them, and each family's cut (`CUTS`: pen, pressure, rise, lean, hand); then the characters as strokes and components on a 1000 grid (y down). Add a round's characters to `hanzi_strokes.py`, reusing the components already there; a character drawn once serves all three families. |
 | `order.py`, `hanzi_order.tsv` | The order Chinese is drawn in, most frequent first, Traditional and Simplified on one row, made from Unihan (see the README). Run `order.py` on a newer Unihan to refresh it. A round takes the next rows not yet drawn. |
-| `audit.py`, `proof.py`, `spacing.py`, `sheet.py` | Checks and proof sheets. `sheet.py docs/specimen.png` makes the README's specimen. |
+| `audit.py`, `proof.py`, `spacing.py`, `sheet.py` | Checks and proof sheets. `sheet.py docs/specimen.png` makes the README's specimen; `tools/readme_art.py` its logo and the three families' line of 《前赤壁賦》, light and dark. |
 | `outline.py`, `subset.py` | Letters for the Pinboard theme's board: SVG outlines, or WOFF2 subsets. |
 | `tools/` | A Chinese round from draft to release: what's left to draw (`hz_todo.py`), contact sheets (`hz_sheet.py`), the canvas-edge check (`edges.py`), merging a round (`merge_round.py`), the checks below in one go (`check_fonts.py`), the round's proof, the pull request and the release. `.claude/skills/hanzi-round` walks through them. |
 | `work/` | Drafts: a round's batches, Unihan, proofs. Not committed. |
@@ -32,7 +32,7 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 
 - **Design first.** Any change to how glyphs look starts as a proof image: the new glyphs beside the old ones and the letters they sit with, at text and display sizes, in both weights. Get it agreed before changing the build. The Pinboard theme project keeps the design board.
 - **One slice per pull request.** Work is split into GitHub milestones and issues; a PR closes the issues it finishes. Chinese grows by frequency, a few hundred characters per round, Traditional and Simplified together, reusing the strokes and components already drawn. Draw each in the form its own standard writes (Taiwan's 教育部 standard forms for Traditional, mainland China's 通用规范汉字表 for Simplified), and add a mainland form of a shared mark to `ZHS` when it sits differently.
-- **Keep the README true.** The character set, the rules table and the check results must match what the build gives.
+- **Keep the README true.** The character set, the rules table and the check results must match what the build gives. `README.zh-Hant.md` is the short Chinese version: what the fonts are, how to install them, the licence; `merge_round.py` keeps its count.
 - **Bump `VERSION`** in `build.py` for each release, then rebuild every font so they all carry it.
 - **A Chinese round** follows `.claude/skills/hanzi-round/SKILL.md`: draft in `work/`, `tools/edges.py` before the build, `tools/check_fonts.py` after it.
 

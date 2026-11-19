@@ -9,7 +9,7 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
   ones (its full report goes to OUT_DIR/fontbakery-FAMILY.txt, one file per
   checkout, so checks can run side by side);
 - no personal data: emails, home or temp paths, or anything --private matches
-  (or YISU_PRIVATE, formerly PINBOARD_PRIVATE), wherever text can live in
+  (or the YISU_PRIVATE environment variable), wherever text can live in
   the .otf and .woff2 files: every table but the outlines, the decoded name
   records, the CFF strings, the glyph names, and the WOFF metadata.
 
@@ -29,7 +29,7 @@ import _repo
 
 ap = argparse.ArgumentParser()
 ap.add_argument('out', nargs='?', default=str(_repo.ROOT / 'out'))
-ap.add_argument('--private', default=os.environ.get('YISU_PRIVATE') or os.environ.get('PINBOARD_PRIVATE', ''))
+ap.add_argument('--private', default=os.environ.get('YISU_PRIVATE', ''))
 a = ap.parse_args()
 out = Path(a.out)
 otfs = sorted(out.glob('*.otf'))
@@ -53,6 +53,24 @@ for f in otfs:
     if rev != version:
         bad.append(f'{f.name} is {rev}, not {version}')
         print(' ', f.name, rev)
+
+# The names a menu shows: English, and Chinese for zh-TW, zh-HK and zh-MO
+# (Traditional) and zh-CN and zh-SG (Simplified), name IDs 1 and 4; ID 2 the
+# weight (Regular and Bold are a style-linked pair); ID 6 the file's stem.
+NAMES = {'YisuHuasha': ('Yisu Huasha', '一粟畫沙', '一粟画沙'), 'YisuLouhen': ('Yisu Louhen', '一粟漏痕', '一粟漏痕'),
+         'YisuYinni': ('Yisu Yinni', '一粟印泥', '一粟印泥')}
+print('== names')
+for f in otfs:
+    stem, weight = f.stem.split('-')
+    en, hant, hans = NAMES[stem]
+    want = {(1, 0x409): en, (2, 0x409): weight, (4, 0x409): f'{en} {weight}', (6, 0x409): f.stem}
+    for lang, zh in ((0x0404, hant), (0x0C04, hant), (0x1404, hant), (0x0804, hans), (0x1004, hans)):
+        want[1, lang], want[4, lang] = zh, f'{zh} {weight}'
+    name = TTFont(f)['name']
+    wrong = [f'ID {i} lang {lang:#06x}: {name.getName(i, 3, 1, lang)} for {v}'
+             for (i, lang), v in want.items() if str(name.getName(i, 3, 1, lang)) != v]
+    print(f'  {f.name}: {"ok" if not wrong else "; ".join(wrong)}')
+    bad += [f'{f.name} {w}' for w in wrong]
 
 print('== OTS')
 for f in otfs:

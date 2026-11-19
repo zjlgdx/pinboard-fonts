@@ -144,3 +144,15 @@ sorted by radical so a round draws whole families. A `-` in a column means
 that script has nothing to draw on that row. `merge_round.py` keeps the
 README's "Drawn so far" line for both lists. Any new list needs its source
 and licence checked and recorded in the README first.
+
+## Past both lists
+
+A text set in the fonts can need a character neither list has (《滕王閣序》's
+`鶩`, say). Draw it the same way: a batch in `work/`, the sheet beside
+characters of the same structure, `edges.py`, the design proof agreed first.
+Check its form against its own standard, looked at, never traced. Merge with
+the same ROWS as the last round (`merge_round.py 4823 NEW_VERSION batch.py`):
+the rows' counts stay as they are, since they count only the rows' own
+characters, and the README's "Past both lists" paragraph names each one and
+the text it is for. `round_proof.py` and `open_pr.sh` are for rows; write
+this proof and pull request by hand.

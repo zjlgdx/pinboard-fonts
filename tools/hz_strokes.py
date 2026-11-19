@@ -80,8 +80,16 @@ def points(d):
 
 COLOURS = ['#c0392b', '#2471a3', '#1e8449', '#b9770e', '#7d3c98', '#117a65', '#a04000', '#2e4053']
 Z = a.size
-lab = ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial Unicode.ttf', 18)
-num = ImageFont.truetype('/System/Library/Fonts/Supplemental/Arial Unicode.ttf', 15)
+
+
+def label_font(size):
+    for p in ('/System/Library/Fonts/Hiragino Sans GB.ttc', '/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'):
+        if Path(p).exists():
+            return ImageFont.truetype(p, size)
+    return ImageFont.load_default(size)
+
+
+lab, num = label_font(18), label_font(15)
 rows = -(-len(names) // a.per)
 img = Image.new('RGB', (a.per * (Z + 20) + 20, rows * (Z + 50) + 20), '#ffffff')
 d = ImageDraw.Draw(img)
@@ -97,6 +105,7 @@ for idx, name in enumerate(names):
     d.rectangle((x0, y0 + 30, x0 + Z, y0 + 30 + Z), outline='#dddddd')
     d.text((x0, y0), f"{where}['{name}'] {len(strokes)} / {want}", fill='#000' if str(len(strokes)) in want.split() else '#c0392b', font=lab)
     s = Z / 1000
+    taken = []                         # label spots: strokes that start together get theirs stacked
     for k, (kind, path) in enumerate(strokes):
         c = COLOURS[k % len(COLOURS)]
         for poly in points(path):
@@ -106,6 +115,10 @@ for idx, name in enumerate(names):
             else:
                 d.ellipse((pts[0][0] - 3, pts[0][1] - 3, pts[0][0] + 3, pts[0][1] + 3), fill=c)
         sx, sy = points(path)[0][0]
-        d.text((x0 + sx * s + 3, y0 + 30 + sy * s - 16), f'{k + 1}{kind}', fill=c, font=num)
+        lx, ly = x0 + sx * s + 3, y0 + 30 + sy * s - 16
+        while any(abs(lx - tx) < 24 and abs(ly - ty) < 14 for tx, ty in taken):
+            ly += 14
+        taken.append((lx, ly))
+        d.text((lx, ly), f'{k + 1}{kind}', fill=c, font=num)
 img.save(a.out, quality=90)
 print(a.out, img.size, len(names))

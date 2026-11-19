@@ -31,6 +31,11 @@ kRSUnicode, radical then strokes, so a round draws a radical's family
 together. A level-1 character brings its Traditional forms, as above. A
 character only Taiwan's list has gets '-' for its Simplified form when the
 mainland writes it differently: that form isn't in level 1.
+
+Then, sorted the same way after those, the rest of Big5's first level
+(kBigFive A440-C67E, 5,401 common characters; none has a count). The
+Simplified column holds the mainland's form (kSimplifiedVariant) when
+通用规范汉字表 lists it at any level and it has no row yet, else '-'.
 """
 import re
 import sys
@@ -55,6 +60,15 @@ def radical_strokes(value):
     """kRSUnicode '120.6' or "213'.0" -> (120, 0, 6): radical, simplified, strokes."""
     rad, strokes = value.split()[0].split('.')
     return int(rad.rstrip("'")), rad.count("'"), int(strokes)
+
+
+def big5_level_1(folder):
+    """Big5's first level, A440-C67E. A value ending in ' is a second
+    mapping to a code another character holds (彞 C255', 彝's code)."""
+    out = {ch for ch, v in fields(folder, 'Unihan_OtherMappings.txt', 'kBigFive').items()
+           if "'" not in v and 'A440' <= v <= 'C67E'}
+    assert len(out) == 5401, len(out)
+    return out
 
 
 def moe_4808(path):
@@ -102,11 +116,27 @@ def main(folder, moe_path=Path(__file__).with_name('moe_4808.tsv')):
             seen.add(t)
     more.sort(key=lambda r: (radical_strokes(rs[r[2][0]]), ord(r[2][0])))
     rows += more
+
+    # Past both lists: the rest of Big5's first level.
+    seen |= {ch for ch, _, _ in more}
+    big5 = []
+    for t in sorted(big5_level_1(folder) - seen, key=lambda t: (radical_strokes(rs[t]), ord(t))):
+        mainland = [s for s in chars(simp.get(t, '')) if s != t]
+        if not mainland:
+            ch = t
+        elif mainland[0] in tgh and mainland[0] not in seen:
+            ch = mainland[0]
+        else:
+            ch = '-'
+        big5.append((ch, 0, [t]))
+        seen |= {t, ch} - {"-"}
+    rows += big5
     head = (Path(folder) / 'Unihan_Readings.txt').read_text(encoding='utf-8').splitlines()[:6]
     version = next(line[2:] for line in head if line.startswith('# Unicode Version'))
     print(f'# Chinese characters by frequency, from the Unicode Han Database (Unihan), {version}.')
     print('# Made by order.py: kHanyuPinlu counts, kTraditionalVariant and kIRG_TSource T1 forms, kTGH level 1;')
-    print('# then, with count 0, the rest of level 1 and of moe_4808.tsv, by kRSUnicode.')
+    print('# then, with count 0, the rest of level 1 and of moe_4808.tsv, by kRSUnicode;')
+    print("# then the rest of Big5's first level (kBigFive A440-C67E), by kRSUnicode, with kTGH Simplified forms.")
     print('# Unihan: Copyright © 1991-2026 Unicode, Inc. Unicode License v3, https://www.unicode.org/license.txt')
     print('# rank\tcount\tsimplified\ttraditional\ttgh-level-1')
     def index(ch):

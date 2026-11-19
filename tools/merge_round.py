@@ -4,6 +4,7 @@ Merges a round: puts the batches into hanzi_strokes.py (before the mainland
 block), sets VERSION in build.py, and updates the README's counts for the
 first ROWS rows of hanzi_order.tsv. Run it in the checkout that gets the round.
 """
+import os
 import re
 import subprocess
 import sys
@@ -12,6 +13,15 @@ import _repo
 
 R = _repo.ROOT
 rows, version, batches = int(sys.argv[1]), sys.argv[2], sys.argv[3:]
+
+# Big5's count needs Unihan (see order.py). work/ isn't committed, so a new
+# worktree has none: look in it, then in the main checkout, or take $UNIHAN.
+# Checked before anything is written.
+common = subprocess.check_output(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'], cwd=R, text=True)
+places = [Path(p) for p in (os.environ.get('UNIHAN'),) if p] + [R / 'work/unihan', Path(common.strip()).parent / 'work/unihan']
+unihan = next((p for p in places if (p / 'Unihan_OtherMappings.txt').exists()), None)
+if unihan is None:
+    sys.exit('Big5 needs Unihan: put it in work/unihan (see order.py) or set UNIHAN')
 
 hs = R / 'hanzi_strokes.py'
 text = hs.read_text(encoding='utf-8')
@@ -43,17 +53,19 @@ r, n2 = re.subn(r'The first [0-9,]+ rows are [0-9,]+ characters across both scri
                 f'The first {rows:,} rows are {count:,} characters across both scripts, and cover {pct}% of the corpus.', r)
 # How much of each standard's list is drawn.
 targets = subprocess.check_output([sys.executable, '-c', '''
-import re, hanzi_strokes as h, order
+import sys, hanzi_strokes as h, order
 have = set(h.C)
 moe = order.moe_4808('moe_4808.tsv')[:4808]
 lv1 = []
 for _, _, s, _, l in (r.rstrip('\\n').split('\\t') for r in open('hanzi_order.tsv', encoding='utf-8') if r[0].isdigit()):
     lv1 += [i.split(':')[0] if ':' in i else s for i in l.split() if i != '-']
 assert len(lv1) == 3500, len(lv1)
-print(sum(c in have for c in moe), sum(c in have for c in lv1))
-'''], cwd=R, text=True).split()
-r, n3 = re.subn(r'Drawn so far: [0-9,]+ of Taiwan\'s 4,808 and [0-9,]+ of the first level\'s 3,500\.',
-                f"Drawn so far: {int(targets[0]):,} of Taiwan's 4,808 and {int(targets[1]):,} of the first level's 3,500.", r)
+big5 = order.big5_level_1(sys.argv[1])
+print(sum(c in have for c in moe), sum(c in have for c in lv1), sum(c in have for c in big5))
+''', str(unihan)], cwd=R, text=True).split()
+r, n3 = re.subn(r"Drawn so far: [0-9,]+ of Taiwan's 4,808, [0-9,]+ of the first level's 3,500 and [0-9,]+ of Big5's 5,401\.",
+                f"Drawn so far: {int(targets[0]):,} of Taiwan's 4,808, {int(targets[1]):,} of the first level's 3,500"
+                f" and {int(targets[2]):,} of Big5's 5,401.", r)
 assert n1 == 1 and n2 == 1 and n3 == 1, f'README sentences not found ({n1}, {n2}, {n3})'
 rd.write_text(r, encoding='utf-8')
-print(f'rows {rows}, version {version}, {count} hanzi, {cover:.2f}% of the corpus, MOE {targets[0]}/4808, level 1 {targets[1]}/3500')
+print(f'rows {rows}, version {version}, {count} hanzi, {cover:.2f}% of the corpus, MOE {targets[0]}/4808, level 1 {targets[1]}/3500, Big5 {targets[2]}/5401')

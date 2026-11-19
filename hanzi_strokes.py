@@ -8691,6 +8691,86 @@ C['齷'] = box((C['齒'], (0, 0, 520, 1000)), (C['屋'], (460, 0, 1000, 1000)))
 C['龔'] = box((C['龍'], (100, 0, 900, 620)), (C['共'], (100, 520, 900, 1000)))
 
 
+# ------------------------------------------------------------ Bopomofo
+# 注音符號, after the Ministry of Education's 《國語注音符號手冊》, looked at,
+# not traced or measured: its stroke counts and notes (末筆不捺, 末筆不鉤,
+# 左上不封口 …) and the shapes drawn again in these strokes. Each symbol is drawn
+# on a frame of about 120-880, a little smaller than a hanzi: three quarters
+# of one in ink, so a line of 注音 sits lighter than the characters it spells.
+
+BOPO_RECT = (20, 20, 980, 980)
+
+
+def _bopo(spec):
+    return box((S(spec), BOPO_RECT))
+
+
+BOPOMOFO = {
+    # 聲符
+    'ㄅ': 'G M430 130 L260 390 L750 375 C750 600 680 770 470 890',
+    'ㄆ': 'G M430 120 L260 360 L760 350 C700 600 500 800 160 900; E M440 560 C540 650 660 760 820 860',
+    'ㄇ': 'E M220 200 L220 880; E M220 200 L780 200 L780 880',
+    'ㄈ': 'E M200 190 L800 190; E M200 190 L200 820 L820 820',
+    'ㄉ': 'G M380 120 L230 360 L780 345 C780 600 700 780 480 890; P M510 345 C490 560 390 720 200 830',
+    'ㄊ': 'E M150 300 L850 290; E M520 110 L250 760 L780 720; D M630 520 C690 580 730 640 750 690',
+    'ㄋ': 'G M220 170 L760 170 L420 450 L760 440 C760 640 690 790 480 890',
+    'ㄌ': 'G M380 230 L250 400 L780 385 C780 600 700 780 480 890; P M530 110 C520 450 430 720 160 880',
+    'ㄍ': 'E M440 160 L230 500 L440 840; E M760 160 L550 500 L760 840',
+    'ㄎ': 'E M180 200 L820 195; G M400 300 L300 480 L740 470 C740 650 670 790 470 890',
+    'ㄏ': 'E M220 200 L820 190; P M220 200 C230 520 200 740 100 890',
+    'ㄐ': 'E M300 150 L300 680 L670 590; E M720 120 L720 900',
+    'ㄑ': 'E M680 140 L330 520 L700 880',
+    'ㄒ': 'E M180 220 L820 215; E M500 215 L500 890',
+    'ㄓ': 'E M260 330 L260 640 L740 640; E M740 330 L740 640; E M500 130 L500 640; E M140 840 L860 835',
+    'ㄔ': 'P M520 130 C460 230 380 300 260 360; P M580 330 C500 470 380 570 200 660; E M450 520 L450 900',
+    'ㄕ': 'E M270 180 L760 180 L760 470; E M250 470 L760 470; P M250 470 C250 680 210 800 110 900',
+    'ㄖ': 'E M230 170 L230 860; E M230 170 L770 170 L770 860; D M420 400 C480 470 530 540 560 620; E M230 850 L770 850',
+    'ㄗ': 'E M230 180 L760 180 L760 520; E M230 180 L230 900',
+    'ㄘ': 'E M150 330 L850 300; E M420 130 L380 560 C560 470 710 500 710 630 C710 770 560 850 380 900',
+    'ㄙ': 'E M520 120 L230 760 L760 700; D M630 500 C690 580 730 650 770 730',
+    # 韻符
+    'ㄚ': 'E M240 140 L500 460; E M760 140 L500 460; E M500 460 L500 900',
+    'ㄛ': 'E M300 220 L720 210; E M560 300 C430 420 300 540 300 660 C300 800 440 840 760 800',
+    'ㄜ': 'E M240 330 L760 320; E M480 120 L480 420 C380 480 300 560 300 680 C300 810 440 850 760 810',
+    'ㄝ': 'E M140 420 L860 410; E M640 160 L640 680; E M360 160 L360 840 L860 840',
+    'ㄞ': 'E M180 190 L820 185; G M360 190 L300 440 L760 430 C760 640 680 790 480 880; P M520 430 C500 640 390 790 170 890',
+    'ㄟ': 'E M340 160 L240 300 C430 480 600 680 840 860',
+    'ㄠ': 'E M470 130 L260 400 L520 470; E M560 330 L230 800 L780 740; D M640 560 C700 620 740 680 770 750',
+    'ㄡ': 'G M220 200 L760 200 C700 420 560 640 200 880; E M300 330 C480 520 660 700 840 870',
+    'ㄢ': 'E M230 160 L700 160 L700 360; G M230 160 L230 470 L780 470 C760 650 690 790 470 890',
+    'ㄣ': 'G M340 170 L240 500 L780 480 C770 640 700 760 540 880',
+    'ㄤ': 'E M150 400 L850 390; P M440 140 C440 520 340 740 130 880; E M600 400 L600 830 L860 830',
+    'ㄥ': 'E M560 130 L200 840 L820 840',
+    'ㄦ': 'P M390 220 C390 520 330 760 140 880; E M620 220 L620 820 C620 860 640 870 700 870 L860 870',
+    'ㄧ': 'E M140 500 L860 495',
+    'ㄨ': 'P M720 180 C600 450 420 700 160 880; E M260 220 C450 430 640 650 840 860',
+    'ㄩ': 'E M230 200 L230 820 L780 820; E M770 200 L770 830',
+    # 國音不用 (ㄪ ㄫ ㄬ) and 空韻 (ㄭ): in the handbook's chart too
+    'ㄪ': 'E M150 200 L850 190; P M400 200 C380 520 300 740 120 880; G M400 440 L760 430 C740 640 660 790 470 890',
+    'ㄫ': 'E M160 300 L840 290; P M400 300 C400 580 330 760 140 880; E M620 300 L620 820 L860 820',
+    'ㄬ': 'D M480 120 C520 160 540 200 550 250; E M200 290 L840 280; P M260 290 C270 560 230 760 110 890',
+    'ㄭ': 'E M150 220 L850 210; E M260 360 L260 820; E M260 360 L740 360 L740 760; E M500 220 L500 900',
+}
+for _ch, _spec in BOPOMOFO.items():
+    C[_ch] = _bopo(_spec)
+
+# The tone marks, as the handbook writes them: about half a symbol tall, up by
+# the top of the symbols, and narrow, drawn in the middle half of the grid
+# (x 350-660), so build.py gives them half an em (one cell in the Typewriter).
+# ˇ is the handbook's check mark and ˙ its dot; they take the place of the
+# Latin spacing caron and dot above, which stand alone in Zhuyin text far more
+# often than in anything else.
+TONES = {
+    'ˉ': 'E M360 330 L640 330',
+    'ˊ': 'P M380 500 L640 180',
+    'ˇ': 'E M350 270 L450 470 L660 160',
+    'ˋ': 'D M360 180 L630 500',
+    '˙': 'D M465 280 C510 305 530 345 520 400',
+}
+for _ch, _spec in TONES.items():
+    C[_ch] = S(_spec)
+
+
 # Mainland China sets the full-width marks in the left of the box, and
 # 。，、 in its lower left (GB/T 15834); Taiwan centres them. The fonts take
 # Taiwan's by default and these where text is tagged Simplified Chinese

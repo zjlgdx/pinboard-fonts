@@ -81,7 +81,7 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.690         # head.fontRevision; nameID 5 says the same
+VERSION = 0.700         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -1138,6 +1138,9 @@ def make(style, shared=None):
             g['adv'] = style.advance * wide_cells(g['ch'])
             # Chinese is placed by its grid, not its ink: 「 hugs the text after it.
             g['dx'] = 0 if g['ch'] in hanzi.C else (g['adv'] - (xmax - xmin)) / 2 - xmin
+            if g['ch'] in hanzi.TONES:
+                # Zhuyin's tone marks are East Asian Width A: one cell, the grid's middle half.
+                g['dx'] = (g['adv'] - hanzi.CUTS[style.key]['em']) // 2
     else:
         # The profiles' rows are the bitmap's, from before the lift, and so
         # are the heights spacing reads, which keeps every advance as it was.
@@ -1148,6 +1151,9 @@ def make(style, shared=None):
             if ch in hanzi.C:
                 # Chinese is set on its em, placed by its grid, not its ink.
                 g['adv'], g['dx'] = hanzi.CUTS[style.key]['em'], 0
+                if ch in hanzi.TONES:
+                    # Zhuyin's tone marks take the middle half of the em.
+                    g['adv'], g['dx'] = g['adv'] // 2, -(g['adv'] // 4)
                 continue
             zone = zone_for(ch, g['left'], xh, caps)
             target = style.lower_side if kind(ch) in ('lower', 'other') else style.upper_side

@@ -115,7 +115,7 @@ def strokes(spec):
     return out
 
 
-from hanzi_strokes import C, VERTICAL, VZHS, ZHS   # noqa: E402,F401  (the characters, kept apart from the engine)
+from hanzi_strokes import C, TONES, VERTICAL, VZHS, ZHS   # noqa: E402,F401  (the characters, kept apart from the engine)
 
 
 def flatten(item, box=(0, 0, 1000, 1000)):

@@ -140,7 +140,10 @@ The corpus counts end at row 2,849. Rows 2,850–4,823 (count 0) are the rest
 of Taiwan's 常用國字標準字體表 (4,808, `moe_4808.tsv`, from Wikisource and
 checked against the MOE's PDF; the README has the source and licence) and of
 level 1 of 通用规范汉字表 (3,500, the last column of `hanzi_order.tsv`),
-sorted by radical so a round draws whole families. A `-` in a column means
-that script has nothing to draw on that row. `merge_round.py` keeps the
-README's "Drawn so far" line for both lists. Any new list needs its source
+sorted by radical so a round draws whole families. Rows 4,824–5,364 are the
+rest of Big5's first level (5,401, Unihan `kBigFive` A440–C67E), sorted the
+same way, with the mainland's form where 通用规范汉字表 has it at any level.
+Draw their Traditional forms as Taiwan's 次常用國字標準字體表 writes them. A `-`
+in a column means that script has nothing to draw on that row.
+`merge_round.py` keeps the README's "Drawn so far" line for the three lists. Any new list needs its source
 and licence checked and recorded in the README first.

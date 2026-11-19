@@ -39,7 +39,9 @@ r, n1 = re.subn(r'every character in the first [0-9,]+ rows of \[`hanzi_order.ts
                 f'every character in the first {rows} rows of [`hanzi_order.tsv`](hanzi_order.tsv): {count} in all', r)
 r, n2 = re.subn(r'The first [0-9,]+ rows are [0-9,]+ characters across both scripts, and cover [0-9.]+% of the corpus.',
                 f'The first {rows:,} rows are {count:,} characters across both scripts, and cover {pct}% of the corpus.', r)
-# How much of each standard's list is drawn.
+# How much of each standard's list is drawn. Big5's comes from Unihan, kept in
+# work/unihan as for order.py.
+assert (R / 'work/unihan/Unihan_OtherMappings.txt').exists(), 'Big5 needs Unihan in work/unihan (see order.py)'
 targets = subprocess.check_output([sys.executable, '-c', '''
 import re, hanzi_strokes as h, order
 have = set(h.C)
@@ -48,10 +50,12 @@ lv1 = []
 for _, _, s, _, l in (r.rstrip('\\n').split('\\t') for r in open('hanzi_order.tsv', encoding='utf-8') if r[0].isdigit()):
     lv1 += [i.split(':')[0] if ':' in i else s for i in l.split() if i != '-']
 assert len(lv1) == 3500, len(lv1)
-print(sum(c in have for c in moe), sum(c in have for c in lv1))
+big5 = order.big5_level_1('work/unihan')
+print(sum(c in have for c in moe), sum(c in have for c in lv1), sum(c in have for c in big5))
 '''], cwd=R, text=True).split()
-r, n3 = re.subn(r'Drawn so far: [0-9,]+ of Taiwan\'s 4,808 and [0-9,]+ of the first level\'s 3,500\.',
-                f"Drawn so far: {int(targets[0]):,} of Taiwan's 4,808 and {int(targets[1]):,} of the first level's 3,500.", r)
+r, n3 = re.subn(r"Drawn so far: [0-9,]+ of Taiwan's 4,808, [0-9,]+ of the first level's 3,500 and [0-9,]+ of Big5's 5,401\.",
+                f"Drawn so far: {int(targets[0]):,} of Taiwan's 4,808, {int(targets[1]):,} of the first level's 3,500"
+                f" and {int(targets[2]):,} of Big5's 5,401.", r)
 assert n1 == 1 and n2 == 1 and n3 == 1, f'README sentences not found ({n1}, {n2}, {n3})'
 rd.write_text(r, encoding='utf-8')
-print(f'rows {rows}, version {version}, {count} hanzi, {cover:.2f}% of the corpus, MOE {targets[0]}/4808, level 1 {targets[1]}/3500')
+print(f'rows {rows}, version {version}, {count} hanzi, {cover:.2f}% of the corpus, MOE {targets[0]}/4808, level 1 {targets[1]}/3500, Big5 {targets[2]}/5401')

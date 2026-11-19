@@ -81,7 +81,7 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
 
-VERSION = 0.710         # head.fontRevision; nameID 5 says the same
+VERSION = 0.711         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -97,6 +97,10 @@ OVERSHOOT = 12                      # skeleton units: ~10 font units, 2.4% of x-
 # Vertical metrics: a 1.24 em line with the caps centred in it
 # (ascender - cap height = |descender|), worked out per font.
 LINE = 1240
+
+# The underscore's top edge, and so the underline's, in font units: clear of
+# the round letters' overshoot (about -15) in every pen, Bold included.
+UNDERSCORE_TOP = -40
 
 # ---------------------------------------------------------------- paths
 
@@ -1125,6 +1129,11 @@ def make(style, shared=None):
     lift = -round(feet[len(feet) // 2])
     for g in glyphs.values():
         g['rec'] = moved(g['rec'], 0, lift)
+    # On the skeleton's line a heavy pen's underscore would touch the feet of
+    # the letters above it, so it hangs a fixed gap under the baseline
+    # instead. Only its height moves: its spacing comes from the bitmap.
+    u = glyphs['underscore']
+    u['rec'] = moved(u['rec'], 0, UNDERSCORE_TOP - round(bounds(u['rec'])[3]))
 
     # Measure the flat tops of x and H for the x-height and cap height.
     def top(ch):

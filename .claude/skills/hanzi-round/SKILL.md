@@ -51,6 +51,20 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
    Simplified Chinese. A Simplified-only character built on a shared one
    draws `_mainland(C['苗'])`. `tools/hz_forms.py` checks both, and
    `check_fonts.py` runs it.
+8. The order strokes are drawn in is the order the site writes them, so draw
+   them in the standard's order, `box()` parts included: a part drawn first in
+   the list is written first. Look the order up for both scripts before
+   drawing: MOE's 筆順學習網 (`searchW.jsp?ID2=1&WORD=字`) for Taiwan, zdic's
+   stroke animation for the mainland. Where they differ, draw Taiwan's as
+   `K['名T']` and the mainland's as `K['名']`, pair them in `_TW_PARTS`, and
+   put the shared users in `_SHARED_TW` (敢 戎 出 凹 延 乏 黃, 肩 扇's 戶).
+   - 辶 and 廴 are written last, after what they carry: `zou()` puts them
+     last, and so must any box that holds one.
+   - 凵 is two strokes, 豎折 then 豎, never a single stroke that turns back up.
+     山 and 耑 write their middle 豎 first; Taiwan's 出 does too, while the
+     mainland's 出 writes it third.
+   - Taiwan counts 辶 as 4 strokes and 廴 as 3, where the mainland counts 3
+     and 2. The shapes are the same, so they are still one drawing.
 
 ### What goes wrong, and the fix
 

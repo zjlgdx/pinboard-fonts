@@ -28,8 +28,8 @@ import build
 import cells
 
 OUT = Path(__file__).resolve().parent / 'out'
-PENS = {'hand': ('ballpoint', 'PinboardBallpoint'), 'mk': ('marker', 'PinboardMarker'),
-        'type': ('typewriter', 'PinboardTypewriter')}
+PENS = {'hand': ('ballpoint', 'YisuHuasha'), 'mk': ('marker', 'YisuLouhen'),
+        'type': ('typewriter', 'YisuYinni')}
 GRID = 5        # font units per path unit: 1/200 em
 
 

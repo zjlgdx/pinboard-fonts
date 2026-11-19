@@ -1,6 +1,6 @@
 ---
 name: hanzi-round
-description: Draw the next rows of hanzi_order.tsv into the Pinboard fonts and ship them as a release — draft batches, edge check, merge, build, checks, proof, pull request, release. Use for a Chinese round or a milestone of them ("do the next 200 rows", "繼續處理下一批", an issue titled "Chinese rows A–B"). Not for Latin, symbols or the build's pens.
+description: Draw the next rows of hanzi_order.tsv into the 一粟 (Yisu) fonts and ship them as a release — draft batches, edge check, merge, build, checks, proof, pull request, release. Use for a Chinese round or a milestone of them ("do the next 200 rows", "繼續處理下一批", an issue titled "Chinese rows A–B"). Not for Latin, symbols or the build's pens.
 ---
 
 # A Chinese round
@@ -81,7 +81,7 @@ percents but one decimal past 99.5, so it never shows 100%.
 
 `check_fonts.py` fails on a stale font, an OTS failure, a fontbakery FAIL, or
 anything that looks personal (add your own name with `--private` or
-`PINBOARD_PRIVATE`). The known results, explained in the README, are printed
+`YISU_PRIVATE`). The known results, explained in the README, are printed
 but pass: file size (the WARN past 1 MB, and `massive-font`'s FAIL past 9 MB,
 marked `(known)`), and in the Typewriter fontbakery's CFF `glyf` error and the
 double-width `xAvgCharWidth`. A new FAIL code is fixed, or explained in the

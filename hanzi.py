@@ -1,4 +1,4 @@
-"""Chinese for Pinboard Typewriter, written with the Typewriter's own pen.
+"""Chinese for the Yisu fonts, written with each family's own pen.
 
 The Latin letters are centre lines (skeleton.py) inked by a pen. Chinese is
 drawn the same way, with one more layer, because characters share their

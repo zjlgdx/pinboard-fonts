@@ -1,4 +1,4 @@
-"""Pinboard's own letterforms, as pen strokes.
+"""The Yisu fonts' own letterforms, as pen strokes.
 
 Each glyph is an SVG path of the pen's centre line, drawn on a 1000-unit
 canvas with y pointing down: the cap line and figures sit at y=50, the

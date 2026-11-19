@@ -1,4 +1,4 @@
-"""The Chinese characters Pinboard draws, as strokes and components.
+"""The Chinese characters the Yisu fonts draw, as strokes and components.
 
 Grid: 1000 x 1000, y down; the frame is the character's face. A stroke is
 'K path', K its kind (see hanzi.py: E even, P lifting, G hooked, N 捺, D 點).

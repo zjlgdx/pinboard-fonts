@@ -11,7 +11,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
-FAMILIES = ['PinboardBallpoint', 'PinboardMarker', 'PinboardTypewriter']
+FAMILIES = ['YisuHuasha', 'YisuLouhen', 'YisuYinni']
 SIZE = 40
 # Spacing strings, kerning pairs, alternates, then the wider character set.
 LINES = ['nnnonnnoonnn HHHOHHHOOHHH 000100 hamburgefonstiv',

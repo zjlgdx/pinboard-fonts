@@ -9,7 +9,7 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
   ones (its full report goes to OUT_DIR/fontbakery-FAMILY.txt, one file per
   checkout, so checks can run side by side);
 - no personal data: emails, home or temp paths, or anything --private matches
-  (or the PINBOARD_PRIVATE environment variable), wherever text can live in
+  (or YISU_PRIVATE, formerly PINBOARD_PRIVATE), wherever text can live in
   the .otf and .woff2 files: every table but the outlines, the decoded name
   records, the CFF strings, the glyph names, and the WOFF metadata.
 
@@ -29,14 +29,14 @@ import _repo
 
 ap = argparse.ArgumentParser()
 ap.add_argument('out', nargs='?', default=str(_repo.ROOT / 'out'))
-ap.add_argument('--private', default=os.environ.get('PINBOARD_PRIVATE', ''))
+ap.add_argument('--private', default=os.environ.get('YISU_PRIVATE') or os.environ.get('PINBOARD_PRIVATE', ''))
 a = ap.parse_args()
 out = Path(a.out)
 otfs = sorted(out.glob('*.otf'))
 bad = []
 
 # Every family in both weights and both formats: a partial build fails.
-FAMILIES = ('PinboardBallpoint', 'PinboardMarker', 'PinboardTypewriter')
+FAMILIES = ('YisuHuasha', 'YisuLouhen', 'YisuYinni')
 missing = [f'{fam}-{w}.{ext}' for fam in FAMILIES for w in ('Regular', 'Bold') for ext in ('otf', 'woff2')
            if not (out / f'{fam}-{w}.{ext}').is_file()]
 print('== files', 'all 12' if not missing else 'missing ' + ', '.join(missing))

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Notes for anyone, human or agent, changing the Pinboard fonts. The [README](README.md) says what the fonts are and how they're built; this file says how to work on them.
+Notes for anyone, human or agent, changing the 一粟 (Yisu) fonts. The [README](README.md) says what the fonts are and how they're built; this file says how to work on them.
 
 ## The one rule: everything is original
 
@@ -42,7 +42,7 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 .venv/bin/python build.py
 .venv/bin/python audit.py
 .venv/bin/python sheet.py docs/specimen.png
-.venv/bin/fontbakery check-universal out/PinboardTypewriter-Regular.otf out/PinboardTypewriter-Bold.otf
+.venv/bin/fontbakery check-universal out/YisuYinni-Regular.otf out/YisuYinni-Bold.otf
 ```
 
 - Run the OpenType Sanitizer over every `.otf` (`python -c "import ots; ots.sanitize(path, '/dev/null')"`); every font must pass.

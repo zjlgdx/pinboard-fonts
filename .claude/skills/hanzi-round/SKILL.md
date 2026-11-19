@@ -30,7 +30,9 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
 5. Draw each in its own standard's form: 教育部 standard forms for
    Traditional, 通用规范汉字表 for Simplified.
 6. Before drawing one, check its parts and stroke count against Unihan
-   (`kTotalStrokes` in `Unihan_IRGSources.txt`, `kRSUnicode`). Where the
+   (`kTotalStrokes` in `Unihan_IRGSources.txt`, `kRSUnicode`).
+   `tools/hz_count.py --batch ...` counts every drawn part and character
+   against it and lists the parts that are off first. Where the
    教育部 字樣說明 gives another count for a Traditional form, follow it. Give a
    Traditional character Taiwan's form of every part, a Simplified one the
    mainland's: 䍃 is `K['䍃TW']` (𠂊 and a dot) in 搖 謠 瑤, `K['䍃']` (爫) in

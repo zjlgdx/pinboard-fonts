@@ -3056,7 +3056,7 @@ C['靈'] = box((K['雨'], (0, 0, 1000, 800)), (K['口'], (120, 360, 360, 520)), 
               (K['口'], (640, 360, 880, 520)), (K['巫'], (100, 540, 900, 1000)))
 C['居'] = box((K['尸'], FULL), (K['古'], (300, 320, 920, 1000)))
 C['松'] = lr(L['木'], C['公'])
-C['鬆'] = box((K['髟'], (0, 0, 1000, 560)), (C['松'], (100, 480, 900, 1000)))
+C['鬆'] = box((K['髟'], (0, 0, 1000, 540)), (C['松'], (40, 460, 960, 1000)))
 C['训'] = lr(L['讠'], K['川'])
 C['訓'] = lr(L['言'], K['川'])
 C['罪'] = box((K['罒'], FULL), (C['非'], (100, 320, 900, 1000)))
@@ -5526,7 +5526,7 @@ C['啃'] = lr(L['口'], C['肯'])
 C['屉'] = box((K['尸'], FULL), (C['世'], (280, 320, 960, 1000)))
 C['屜'] = box((K['尸'], FULL), (L['彳'], (240, 320, 700, 1000)), (C['世'], (420, 320, 960, 1000)))
 C['嵌'] = box((C['山'], (200, 0, 800, 320)), (box((C['甘'], (0, 0, 560, 1000)), (K['欠'], (500, 0, 1000, 1000))), (60, 280, 940, 1000)))
-C['徊'] = box((L['彳'], FULL), (K['回'], (340, 100, 960, 900)))
+C['徊'] = box((L['彳'], FULL), (C['回'], (350, 90, 970, 950)))
 C['徘'] = box((L['彳'], FULL), (C['非'], (320, 0, 1000, 1000)))
 C['捍'] = lr(L['扌'], K['旱'])
 C['撼'] = lr(L['扌'], C['感'])
@@ -8859,7 +8859,7 @@ for _ch, _spec in BOPOMOFO.items():
 
 # The tone marks, as the handbook writes them: about half a symbol tall, up by
 # the top of the symbols, and narrow, drawn in the middle half of the grid
-# (x 350-660), so build.py gives them half an em (one cell in the Typewriter).
+# (x 350-660), so build.py gives them half an em (one cell in Yinni).
 # ˇ is the handbook's check mark and ˙ its dot; they take the place of the
 # Latin spacing caron and dot above, which stand alone in Zhuyin text far more
 # often than in anything else.

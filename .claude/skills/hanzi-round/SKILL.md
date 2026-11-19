@@ -26,7 +26,7 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
    exists. `tools/hz_fixrefs.py work/rN_2.py work/rN_1.py` fixes K/C mix-ups
    and lists unknown parts.
 4. Look at them: `tools/hz_sheet.py work/sheet.jpg --batch work/rN_1.py` (all
-   three pens, and the Ballpoint large). Fix what looks wrong and look again.
+   three pens, and Huasha large). Fix what looks wrong and look again.
 5. Draw each in its own standard's form: 教育部 standard forms for
    Traditional, 通用规范汉字表 for Simplified.
 6. Before drawing one, check its parts and stroke count against Unihan
@@ -63,8 +63,8 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   甘 `(0, -60, 1000, 2000)`, 弗 `(0, 0, 1000, 1700)`, 幺 `(0, 0, 1000, 1700)`,
   乞 `(-375, 0, 1046, 1000)`.
 - **Nothing starts on the top edge.** A stroke at y < 30, or a part whose rect
-  starts at y 0 with ink at its own top, is cut off by the Typewriter and
-  the Marker (懼's 瞿 did this). Start at 30, or the rect at 40–50.
+  starts at y 0 with ink at its own top, is cut off by Yinni and
+  Louhen (懼's 瞿 did this). Start at 30, or the rect at 40–50.
 - **Stacked parts crowd.** 疊, 寧, 憋 needed their top parts smaller and the
   lower ones given more of the height.
 - **A part boxed twice shrinks.** `K['髟']` drew its 镸 on the left of the
@@ -92,7 +92,7 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
 
 It draws every character in all six fonts on the build's own canvas
 (`build.canvas`) and lists any whose ink reaches the edge; fix them first.
-The pens' jitter depends on the canvas, and the Typewriter's is a cell wider,
+The pens' jitter depends on the canvas, and Yinni's is a cell wider,
 so a check on any other canvas misses cuts.
 
 Then in a branch `hanzi-LAST` from main:
@@ -117,7 +117,7 @@ percents but one decimal past 99.5, so it never shows 100%.
 anything that looks personal (add your own name with `--private` or
 `YISU_PRIVATE`). The known results, explained in the README, are printed
 but pass: file size (the WARN past 1 MB, and `massive-font`'s FAIL past 9 MB,
-marked `(known)`), and in the Typewriter fontbakery's CFF `glyf` error and the
+marked `(known)`), and in Yinni fontbakery's CFF `glyf` error and the
 double-width `xAvgCharWidth`. A new FAIL code is fixed, or explained in the
 README and added to `KNOWN_FAIL` in `check_fonts.py`, once the maintainer agrees.
 

@@ -19,9 +19,9 @@ Every stroke here was drawn for this font, from what each character is: no
 other font's outlines or stroke data. The grid's frame is the character's
 face.
 
-Each family writes the same strokes its own way (CUTS): the Typewriter as
-仿宋 metal type struck through a ribbon, the Ballpoint as a hand's 楷書, the
-Marker with its own chisel nib. Only the pen and the grid's transform
+Each family writes the same strokes its own way (CUTS): Yinni as
+仿宋 metal type struck through a ribbon, Huasha as a hand's 楷書, Louhen
+with its own chisel nib. Only the pen and the grid's transform
 differ, so a character drawn once serves all three.
 """
 import math
@@ -29,7 +29,7 @@ import random
 import re
 
 # Each family's cut of Chinese.
-#   em      the character's advance, font units (the Typewriter's two cells)
+#   em      the character's advance, font units (Yinni's two cells)
 #   face    how much of it the grid's frame fills, font units
 #   pen     the pen against the family's Latin pen: (Regular, Bold). Dense
 #           characters stay open under the Bold.
@@ -40,19 +40,19 @@ import re
 #   lean    degrees the whole character leans, to sit with a leaning Latin
 #   narrow, tall   the face's width and height, against square
 #   hand    how much each stroke strays from its place, as a hand's do
-#   inked   times the Typewriter's ribbon is struck over it
+#   inked   times Yinni's ribbon is struck over it
 CUTS = {
     # 仿宋 type, after the slugs of the Chinese typewriter: rising
     # horizontals, a narrow upright face, a press where the pen lands and
     # stops, a little contrast, and a worn ribbon.
-    'typewriter': dict(em=1200, face=1060, pen=(0.92, 0.76), nib=(1.12, 0.70), cut='fang',
+    'yinni': dict(em=1200, face=1060, pen=(0.92, 0.76), nib=(1.12, 0.70), cut='fang',
                        rise=5.5, lean=0, narrow=0.90, tall=1.03, hand=0, inked=2),
     # A hand's 楷書 in ballpoint: pressure that comes and goes, rising
     # horizontals, the Latin's lean (less of it), each stroke a little astray.
-    'ballpoint': dict(em=1000, face=900, pen=(1.0, 0.85), nib=(1.0, 0.93), cut='hand',
+    'huasha': dict(em=1000, face=900, pen=(1.0, 0.85), nib=(1.0, 0.93), cut='hand',
                       rise=4.5, lean=4, narrow=1.0, tall=1.0, hand=1.0, inked=0),
-    # The Marker's chisel at 35 degrees: thick and thin come from the nib.
-    'marker': dict(em=1000, face=940, pen=(0.92, 0.82), nib=None, cut='even',
+    # Louhen's chisel at 35 degrees: thick and thin come from the nib.
+    'louhen': dict(em=1000, face=940, pen=(0.92, 0.82), nib=None, cut='even',
                    rise=3, lean=0, narrow=1.0, tall=1.0, hand=0.6, inked=0),
 }
 

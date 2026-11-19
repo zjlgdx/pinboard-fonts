@@ -8,13 +8,13 @@ with a wider pen (and, for the handwriting, a little wider), then spaced
 and kerned afresh.
 
     .venv/bin/python build.py            # all fonts
-    .venv/bin/python build.py marker     # one family, both weights
+    .venv/bin/python build.py louhen     # one family, both weights
 
-The pens:
-  ballpoint  a fine round pen leaning 9 degrees, with light pressure changes
-  marker     a chisel nib held at 35 degrees, upright
-  typewriter a round pen with slab serifs, monospaced, struck through an
-             inked ribbon: uneven ink, dry patches, letters a little off line
+The pens (the key, and the nickname the fonts had up to 0.730):
+  huasha  the Ballpoint: a fine round pen leaning 9 degrees, with light pressure changes
+  louhen  the Marker: a chisel nib held at 35 degrees, upright
+  yinni   the Typewriter: a round pen with slab serifs, monospaced, struck through an
+          inked ribbon: uneven ink, dry patches, letters a little off line
 
 What follows the usual type-design rules (see README.md for sources):
   - round shapes overshoot the baseline, x-height, cap height and figure
@@ -32,7 +32,7 @@ What follows the usual type-design rules (see README.md for sources):
   - combining marks are zero-width GDEF marks, attached by anchors taken
     from the same placement (mark, mkmk), with ccmp for dotless i and j and
     for the flatter capital forms of marks above
-  - the typewriter's box drawing and block elements are made to the cell,
+  - Yinni's box drawing and block elements are made to the cell,
     not with a pen, so they join across columns and rows
   - curves get points at their extremes; outer contours run
     counter-clockwise, as CFF expects
@@ -360,7 +360,7 @@ class Style:
         or its own nib, along the character's strokes. Variant 1 is the
         form mainland China sets in a line (hanzi.ZHS), 2 in a column (hanzi.VZHS)."""
         cut = hanzi.CUTS[self.key]
-        strokes, warp, rng = hanzi.placed(ch, self.key, cut['em'] / K, K, seed_for(self.key, ch), form=variant)
+        strokes, warp, rng = hanzi.placed(ch, self.key, cut['em'] / K, K, seed_for(self.seed, ch), form=variant)
         pen = cut['pen'][1 if self.bold else 0]
         draw = ImageDraw.Draw(img)
         if cut['nib'] is None:
@@ -385,10 +385,11 @@ class Style:
         return lambda x: cx + (x - cx) * self.widen
 
 
-class Ballpoint(Style):
+class Huasha(Style):
     family = 'Yisu Huasha'        # 畫沙: 如錐畫沙
     family_zh = ('一粟畫沙', '一粟画沙')
-    key = 'ballpoint'
+    key = 'huasha'
+    seed = 'ballpoint'            # the jitter's seed keeps the pen's first name, so no glyph moves
     alternates = 2
     # Degrees of lean, part of the handwriting as in other script fonts: the
     # font stays a Regular with post.italicAngle 0, but is spaced upright.
@@ -409,7 +410,7 @@ class Ballpoint(Style):
         self.ring, self.hook = (76, 1.3) if bold else (50, 1.0)
 
     def warp(self, ch, variant=0):
-        rng = random.Random(seed_for('ballpoint', base_of(ch) + '#' * variant))
+        rng = random.Random(seed_for(self.seed, base_of(ch) + '#' * variant))
         # Each letter leans, sits and sizes a little differently, kept small
         # enough that no one letter jumps out of a word.
         k = math.tan(math.radians(self.lean + rng.uniform(-1.5, 1.5)))
@@ -430,10 +431,11 @@ class Ballpoint(Style):
         round_pen(draw, strokes, radius=self.radius, taper=0.15)
 
 
-class Marker(Style):
+class Louhen(Style):
     family = 'Yisu Louhen'        # 漏痕: 如屋漏痕
     family_zh = ('一粟漏痕', '一粟漏痕')
-    key = 'marker'
+    key = 'louhen'
+    seed = 'marker'
     alternates = 2
     lean = 0
     space = 270
@@ -466,7 +468,7 @@ class Marker(Style):
         return out
 
     def warp(self, ch, variant=0):
-        rng = random.Random(seed_for('marker', base_of(ch) + '#' * variant))
+        rng = random.Random(seed_for(self.seed, base_of(ch) + '#' * variant))
         ax = rng.uniform(0, 6)
         dy = rng.uniform(-3, 3)
         rot = math.radians(rng.uniform(-0.8, 0.8))
@@ -488,10 +490,11 @@ class Marker(Style):
 SERIF = re.compile(r'M(-?[\d.]+) (-?[\d.]+) L(-?[\d.]+) (-?[\d.]+)')
 
 
-class Typewriter(Style):
+class Yinni(Style):
     family = 'Yisu Yinni'         # 印泥: 如印印泥
     family_zh = ('一粟印泥', '一粟印泥')
-    key = 'typewriter'
+    key = 'yinni'
+    seed = 'typewriter'
     mono = True
     alternates = 0
     lean = 0
@@ -529,7 +532,7 @@ class Typewriter(Style):
 
     def warp(self, ch, variant=0):
         # Keys don't vary: a variant is only ever a combining mark's capital form.
-        rng = random.Random(seed_for('typewriter', base_of(ch)))
+        rng = random.Random(seed_for(self.seed, base_of(ch)))
         ps = self.parts(ch, variant)
         # An accent doesn't change how its letter fills the cell.
         body = [d for role, d, _w in ps if role != 'mark'] or [d for _r, d, _w in ps]
@@ -543,7 +546,7 @@ class Typewriter(Style):
             # Symbols keep their proportions: shrink both ways if too wide.
             sq = sy = min(1.0, room / max(hi - lo, 1))
         else:
-            # Typewriter letters fill their cell: narrow ones widen, wide ones squeeze.
+            # Yinni's letters fill their cell: narrow ones widen, wide ones squeeze.
             sq = min(1.45 if hi - lo > 150 else 1.0, room / max(hi - lo, 1))
             sy = 1.0
         # Each key strikes a little off: a touch high or low, a hair rotated.
@@ -584,7 +587,7 @@ class Typewriter(Style):
         return Image.fromarray((ink * 255).astype(np.uint8))
 
 
-STYLES = {'ballpoint': Ballpoint, 'marker': Marker, 'typewriter': Typewriter}
+STYLES = {'huasha': Huasha, 'louhen': Louhen, 'yinni': Yinni}
 
 # ---------------------------------------------------------------- tracing
 
@@ -964,7 +967,7 @@ CJK_CENTRED = '。、，；：？！'
 def cjk_spacing(style, glyphs):
     """chws and halt. chws (JLREQ, CLREQ): where two marks meet, one blank
     half goes. halt: every mark half-width, on request. The blank side is
-    the side the ink isn't on. In the Typewriter half a mark is one cell, so
+    the side the ink isn't on. In Yinni half a mark is one cell, so
     chws keeps the grid; the proportional families also take a quarter off a
     centred mark's side that faces a bracket, as Taiwan sets them."""
     have = lambda chars: [glyph_name(c) for c in chars if glyph_name(c) in glyphs]
@@ -1231,7 +1234,7 @@ def make(style, shared=None):
         own, stack = style.anchors(ch, v)
         anchors[name] = ({c: font_pt(p) for c, p in own.items()}, {c: font_pt(p) for c, p in stack.items()})
 
-    # Box drawing and blocks, made to the cell (typewriter only).
+    # Box drawing and blocks, made to the cell (Yinni only).
     if style.mono:
         light = round(2 * style.radius * K / 2) * 2
         for ch, rec in cells.glyphs(style.advance, TYPO_ASC, TYPO_DESC, light).items():

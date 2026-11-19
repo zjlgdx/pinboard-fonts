@@ -21,7 +21,7 @@ LINES = ['nnnonnnoonnn HHHOHHHOOHHH 000100 hamburgefonstiv',
          '€12 £3 ¥5 ¢ © ® ™ ± ÷ ≠ ≤ ¿¡ «oui» ½ ¾ § ¶ ← → ✓ ✗',
          '\\ ^ ` { | } ~ … ° • 0O 1lI']
 BOLD = 'Bold: hamburgefonstiv, Zürich €12 ✓'
-# The typewriter as a terminal: box drawing, blocks and Claude Code's marks.
+# Yinni as a terminal: box drawing, blocks and Claude Code's marks.
 TERMINAL = ['╭───────────────────────────────╮ ┌──┬──┐ ╔══╗ ▛▀▜',
             '│ ✻ Welcome to Claude Code      │ ├──┼──┤ ║░▒║ ▌█▐',
             '╰───────────────────────────────╯ └──┴──┘ ╚══╝ ▙▄▟',
@@ -39,7 +39,7 @@ def main():
     css = ''.join(f"@font-face{{font-family:'{f.stem}';src:url({f.name})}}" for f in sorted(OUT.glob('*.woff2')))
     body, rows = '', 0
     for fam in FAMILIES:
-        lines = LINES + (TERMINAL if fam == 'YisuYinni' else [])   # the Typewriter
+        lines = LINES + (TERMINAL if fam == 'YisuYinni' else [])   # Yinni
         body += '<div>' + ''.join(para(l, fam) for l in lines) + para(BOLD, fam, bold=True) + '</div>'
         rows += len(lines) + 1
     page = OUT / 'sheet.html'

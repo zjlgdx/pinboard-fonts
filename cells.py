@@ -1,4 +1,4 @@
-"""Box drawing and block elements for the typewriter, drawn to the cell.
+"""Box drawing and block elements for Yinni, drawn to the cell.
 
 These are not written with a pen: a terminal sets them edge to edge, so
 every line has to meet the next cell's exactly. Each glyph fills the whole

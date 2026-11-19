@@ -2,7 +2,7 @@
 
 A round's proof from the built fonts: one line of Taiwan's text and one of the
 mainland's in every family and weight, then every character of rows
-FIRST..LAST, in the Ballpoint Regular. Labels are set in the built Typewriter.
+FIRST..LAST, in Huasha Regular. Labels are set in the built Yinni.
 """
 import argparse
 import sys
@@ -22,7 +22,7 @@ a = ap.parse_args()
 fonts = Path(a.fonts)
 
 new = _repo.chars_of(a.first, a.last)
-fams = [(f'Yisu{s}-{w}', n, w) for s, n in (('Yinni', 'Typewriter'), ('Huasha', 'Ballpoint'), ('Louhen', 'Marker')) for w in ('Regular', 'Bold')]
+fams = [(f'Yisu{s}-{w}', s, w) for s in ('Yinni', 'Huasha', 'Louhen') for w in ('Regular', 'Bold')]
 cmap = TTFont(fonts / 'YisuHuasha-Regular.otf').getBestCmap()
 miss = [c for c in a.hant + a.hans + ''.join(new) if c.strip() and ord(c) not in cmap]
 if miss:
@@ -44,7 +44,7 @@ for stem, n, w in fams:
     d.text((260, y - 6), a.hans, fill=INK, font=f, language='zh-Hans')
     y += 64
 y += 20
-d.text((30, y), f'rows {a.first}-{a.last}: {len(new)} characters, Ballpoint Regular', fill=LABEL, font=lab)
+d.text((30, y), f'rows {a.first}-{a.last}: {len(new)} characters, Huasha Regular', fill=LABEL, font=lab)
 y += 40
 f = ImageFont.truetype(str(fonts / 'YisuHuasha-Regular.otf'), SZ)
 for i, ch in enumerate(new):

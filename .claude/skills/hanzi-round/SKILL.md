@@ -32,7 +32,11 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
 6. Before drawing one, check its parts and stroke count against Unihan
    (`kTotalStrokes` in `Unihan_IRGSources.txt`, `kRSUnicode`).
    `tools/hz_count.py --batch ...` counts every drawn part and character
-   against it and lists the parts that are off first. Where the
+   against it and lists the parts that are off first. Many of those only
+   draw a turn as two items or two strokes as one (糸's 幺, 凵): see which with
+   `tools/hz_strokes.py work/p.jpg NAMES`, which numbers each stroke. A part
+   built from the wrong part is a real one: 番 had 采 (爫 over 木) where its top
+   is 釆 (丿 over 米); 宿 added 百's 丿 to 白, which has its own. Where the
    教育部 字樣說明 gives another count for a Traditional form, follow it. Give a
    Traditional character Taiwan's form of every part, a Simplified one the
    mainland's: 䍃 is `K['䍃TW']` (𠂊 and a dot) in 搖 謠 瑤, `K['䍃']` (爫) in

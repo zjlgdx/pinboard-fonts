@@ -16,6 +16,9 @@ that is only part of its character, a Taiwan count Unihan doesn't give, or a
 redraw waiting on a clearer reference). They are listed apart, with the reason,
 so the list above them holds only what nobody has looked at yet. Take a part out
 of KNOWN when it is fixed or the reason no longer holds.
+
+Unihan's counts are a lead, not the standard: for Traditional characters
+tools/hz_moe.py compares with 教育部's own frame counts, which decide.
 """
 import argparse
 import sys
@@ -36,18 +39,16 @@ h = _repo.load(a.batch)
 MAINLAND = 'the mainland form; the Taiwan form is its T entry'
 PIECE = 'only part of its character; the whole counts right'
 TAIWAN = "Taiwan's count (教育部); Unihan gives the mainland's"
-EAR = "阝 is 3 strokes in Taiwan, 2 on the mainland: a Taiwan 阝 isn't drawn yet"
-REDRAW = 'needs a redraw from a clearer reference (#97)'
+MOE = "drawn from 教育部's frames (polish 6); Unihan's count differs: tools/hz_moe.py checks it"
 KNOWN = {
-    **dict.fromkeys('艹辶廴乏敖者延离荒瓦叟敢萧苋', MAINLAND),
-    '及': MAINLAND + " (Taiwan writes 4: a K['及T'] is still to come)",
+    **dict.fromkeys('艹辶廴乏敖延离荒瓦叟敢萧苋及阝之以象巨骨修致', MAINLAND),
     **dict.fromkeys(['饰', '赢', '贗', '纏', '𥏻', '瑙', '珡', '荧'], PIECE),
     '莧': "drawn as 萈 for 寬 and 髖 (C['莧'] has its own 11)",
     '𡗗': "左 over 月 (9) as used; Unihan's 5 is the code point's own",
     **dict.fromkeys('卸臾閭藺爵雚', TAIWAN),
     '蔺': "the mainland's 14, which Unihan gives as 15",
-    **dict.fromkeys('郭邦耶邪隙鄉', EAR),
-    **dict.fromkeys(['黽', '巤', '褱', '臧', '虒', '丵', '𣦼', '疐', '裊', '蕭'], REDRAW),
+    '者': "8 in 教育部's frames and 國語辭典 (共8畫); Unihan's 9 counts a 點 neither standard writes",
+    **dict.fromkeys(['郭', '邦', '耶', '邪', '隙', '鄉', '黽', '巤', '褱', '臧', '虒', '丵', '𣦼', '疐', '裊', '蕭', '毄', '戠'], MOE),
 }
 
 

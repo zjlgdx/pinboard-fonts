@@ -78,6 +78,17 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
      decide. When a difference is understood, add the part to `KNOWN` in
      `tools/hz_count.py` with the reason, so its list keeps only what nobody
      has looked at yet.
+   - For Traditional characters, count against 教育部 itself:
+     `tools/hz_moe.py COUNTS.json` takes {character: frames}, counted while
+     viewing 筆順學習網's frames in the browser (never save the images), and
+     lists the characters off and the parts most of whose users are off.
+     Polish 6 found 430 this way that Unihan hid. A strip over 16 strokes has
+     two columns, read right column first; a tall character's last frame can
+     spill into an extra slot, so a count one too high needs a look first.
+   - Taiwan forms the standard has and fonts often don't: 阝 is 3 strokes
+     (橫撇, 彎鉤, 豎), 者 has no 點 (8), 艹 is 豎 橫 橫 豎, and 㐬 充 育 have no
+     點 over the 一 (流 9, 充 5). 衣 and the bottoms written like it (表 展 農
+     長 袁 裹 喪 讓) put the small 撇 before the 捺.
 
 ### What goes wrong, and the fix
 

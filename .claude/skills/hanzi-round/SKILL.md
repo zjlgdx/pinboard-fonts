@@ -89,6 +89,10 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
      (橫撇, 彎鉤, 豎), 者 has no 點 (8), 艹 is 豎 橫 橫 豎, and 㐬 充 育 have no
      點 over the 一 (流 9, 充 5). 衣 and the bottoms written like it (表 展 農
      長 袁 裹 喪 讓) put the small 撇 before the 捺.
+   - A right count is not a right shape: 飞 drawn as 几 and 莫 reading as 其
+     both had the right count. After a round, look at its characters on
+     `tools/hz_grid.py` sheets, not only at the numbers: a wrong part (阝 for
+     卩, 西 for 覀), the other script's form, and parts that collide.
 
 ### What goes wrong, and the fix
 

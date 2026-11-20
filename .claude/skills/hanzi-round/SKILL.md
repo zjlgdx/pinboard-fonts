@@ -64,7 +64,20 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
      山 and 耑 write their middle 豎 first; Taiwan's 出 does too, while the
      mainland's 出 writes it third.
    - Taiwan counts 辶 as 4 strokes and 廴 as 3, where the mainland counts 3
-     and 2. The shapes are the same, so they are still one drawing.
+     and 2: Taiwan parts the 橫折折撇 at its first turn. They are
+     `K['辶T']`/`K['辶']` and `K['廴T']`/`K['廴']`, paired in `_TW_PARTS`.
+   - A turn is one stroke, and so one `S()` item: 橫折, 撇折, 豎折折鉤 are
+     drawn as one path that turns. Two strokes that meet at a corner are two
+     items. Polish 5 found both mistakes many times: 糸 幺 幾 with each pair
+     of 撇折 drawn as one zigzag, 匚 弓 鸟 with one turn drawn in pieces.
+   - A shared part's order moves its whole family: 隹 writes its middle 豎
+     before the bottom 橫, 門's right half is 豎 then 橫折鉤, the right 阝 is
+     橫撇彎鉤 then 豎, 尸 is 橫折, 橫, 撇. Fix the part, not each character.
+   - Unihan's `kTotalStrokes` mixes the two scripts' counts (鍋 16, 飯 13
+     against 教育部's 17 and 12). For a Taiwan form the Ministry's frames
+     decide. When a difference is understood, add the part to `KNOWN` in
+     `tools/hz_count.py` with the reason, so its list keeps only what nobody
+     has looked at yet.
 
 ### What goes wrong, and the fix
 

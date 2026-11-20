@@ -14,8 +14,8 @@
 
 <p align="center">
   <a href="https://github.com/zjlgdx/yisu-fonts/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/zjlgdx/yisu-fonts?label=release&color=b3362b"></a>
-  <a href="OFL.txt"><img alt="Fonts: SIL OFL 1.1" src="https://img.shields.io/badge/fonts-OFL%201.1-1d1c1b"></a>
-  <a href="LICENSE"><img alt="Code: MIT" src="https://img.shields.io/badge/code-MIT-1d1c1b"></a>
+  <a href="LICENSE"><img alt="Fonts: SIL OFL 1.1" src="https://img.shields.io/badge/fonts-OFL%201.1-1d1c1b"></a>
+  <a href="LICENSE-MIT"><img alt="Code: MIT" src="https://img.shields.io/badge/code-MIT-1d1c1b"></a>
   <a href="https://yisu.aixie.de"><img alt="Website" src="https://img.shields.io/badge/see%20them%20write-yisu.aixie.de-d9b45a"></a>
 </p>
 
@@ -189,4 +189,4 @@ The fonts were drawn for [Pinboard](https://github.com/zjlgdx/claude-theme-pinbo
 
 ## Licence
 
-The fonts are under the [SIL Open Font License 1.1](OFL.txt): free to use, change and share, in personal and commercial work, and to bundle with software; they can't be sold on their own. The build scripts are under the [MIT License](LICENSE).
+The fonts are under the [SIL Open Font License 1.1](LICENSE): free to use, change and share, in personal and commercial work, and to bundle with software; they can't be sold on their own. The build scripts are under the [MIT License](LICENSE-MIT).

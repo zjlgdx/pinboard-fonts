@@ -62,4 +62,4 @@
 
 ## 授權
 
-字型採用 [SIL Open Font License 1.1](OFL.txt)：個人與商業用途都可以免費使用、修改、再散布，也可以隨軟體一起發佈，但不能單獨販售字型本身。建置程式採用 [MIT License](LICENSE)。
+字型採用 [SIL Open Font License 1.1](LICENSE)：個人與商業用途都可以免費使用、修改、再散布，也可以隨軟體一起發佈，但不能單獨販售字型本身。建置程式採用 [MIT License](LICENSE-MIT)。

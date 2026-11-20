@@ -1,7 +1,7 @@
 """python tools/hz_sheet.py OUT.jpg [--batch A.py,B.py] [CHARS] [--size N]
 
-A contact sheet for drawing: each character in the Typewriter, the Ballpoint
-and the Marker Bold, with the Ballpoint again at twice the size. With no CHARS,
+A contact sheet for drawing: each character in Yinni, Huasha
+and Louhen Bold, with Huasha again at twice the size. With no CHARS,
 every character the batches define (C[...] = ...).
 """
 import argparse
@@ -47,14 +47,14 @@ def label_font():
     return ImageFont.load_default()
 
 
-fams = [(build.Typewriter, False), (build.Ballpoint, False), (build.Marker, True)]
+fams = [(build.Yinni, False), (build.Huasha, False), (build.Louhen, True)]
 cells = []
 skip = [ch for ch in chars if ch not in hs.C]
 if skip:
     print('not characters (only components or undrawn), skipped:', ''.join(skip))
 for ch in [c for c in chars if c in hs.C]:
     ts = [tile(St, ch, a.size, b) for St, b in fams]
-    big = tile(build.Ballpoint, ch, a.size * 2)
+    big = tile(build.Huasha, ch, a.size * 2)
     cell = Image.new('L', (max(sum(t.width for t in ts), big.width) + 10, big.height + ts[0].height + 26), 0)
     x = 0
     for t in ts:

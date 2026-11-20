@@ -19,7 +19,7 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 | --- | --- |
 | `skeleton.py` | Every glyph's centre line as an SVG path. The canvas is 1000 units with y pointing down: the cap line and figures sit at 50, the x-height at 250, the baseline at 750, the descender at 960 and ascenders at 40. |
 | `build.py` | The pens, the bitmap, potrace, spacing, kerning, features, hinting and the OpenType writer. `VERSION` is head.fontRevision and nameID 5. |
-| `cells.py` | The Typewriter's box drawing, block elements and Powerline separators, drawn exactly to the 600-unit cell. |
+| `cells.py` | Yinni's box drawing, block elements and Powerline separators, drawn exactly to the 600-unit cell. |
 | `hanzi.py`, `hanzi_strokes.py` | Chinese: the stroke kinds, how the pen moves along them, and each family's cut (`CUTS`: pen, pressure, rise, lean, hand); then the characters as strokes and components on a 1000 grid (y down). Add a round's characters to `hanzi_strokes.py`, reusing the components already there; a character drawn once serves all three families. |
 | `order.py`, `hanzi_order.tsv` | The order Chinese is drawn in, most frequent first, Traditional and Simplified on one row, made from Unihan (see the README). Run `order.py` on a newer Unihan to refresh it. A round takes the next rows not yet drawn. |
 | `audit.py`, `proof.py`, `spacing.py`, `sheet.py` | Checks and proof sheets. `sheet.py docs/specimen.png` makes the README's specimen; `tools/readme_art.py` its logo and the three families' line of 《前赤壁賦》, light and dark. |

@@ -1,7 +1,8 @@
 """Write the Yisu fonts, each cut down to the letters it draws, as a
 TypeScript module of WOFF2 data URIs for use inside an SVG.
 
-Reads JSON from stdin, {"BALLPOINT": "text…", "MARKER": …, "TYPEWRITER": …}:
+Reads JSON from stdin, {"BALLPOINT": "text…", "MARKER": …, "TYPEWRITER": …}
+(the Pinboard theme still names the fonts by their old nicknames):
 
     node board-text.mjs | .venv/bin/python subset.py ../mockups/fonts5.ts
 """

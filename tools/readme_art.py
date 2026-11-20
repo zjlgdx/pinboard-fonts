@@ -5,7 +5,7 @@
 FONTS is out/ (the default), or the `full/` folder the website's tools/webfonts.py
 writes, where the fonts are cut into slices (it has an index.json). Writes, in docs/:
 
-    logo-light.svg, logo-dark.svg   the mark (the Marker's bold 一, a grain above it)
+    logo-light.svg, logo-dark.svg   the mark (Louhen's bold 一, a grain above it)
                                     with 一粟 and Yisu, as outlines: GitHub shows an
                                     SVG as an image, which can't load a font
     hero-light.png, hero-dark.png   one line of 《前赤壁賦》 and its English in each family
@@ -29,7 +29,7 @@ DOCS = ROOT / 'docs'
 # The website's colours (zjlgdx/yisu): ink and the accent, by day and by night.
 THEMES = {'light': dict(ink='#1d1c1b', hot='#b3362b', soft='#6b6760'),
           'dark': dict(ink='#ece8da', hot='#d9b45a', soft='#9a968c')}
-FAMILIES = [('Yinni', '印泥', 'the Typewriter'), ('Huasha', '畫沙', 'the Ballpoint'), ('Louhen', '漏痕', 'the Marker')]
+FAMILIES = [('Yinni', '印泥', 'the Typewriter'), ('Huasha', '畫沙', 'the Ballpoint'), ('Louhen', '漏痕', 'the Marker')]  # names and nicknames
 WEB = {'Yinni': 'yinni', 'Huasha': 'huasha', 'Louhen': 'louhen'}
 
 SLICED = (FONTS / 'index.json').exists()
@@ -150,7 +150,7 @@ def hero(theme):
     c, W, pad = THEMES[theme], 2000, 40
     rows = []
     for fam, zh, en in FAMILIES:
-        big = 108 if fam != 'Yinni' else 92        # the Typewriter's hanzi take 1.2 em
+        big = 108 if fam != 'Yinni' else 92        # Yinni's hanzi take 1.2 em
         rows.append((fam, zh, en, Line(fam, 'Regular', big), Line(fam, 'Regular', 46), Line(fam, 'Bold', 34)))
     H = pad + len(rows) * 300
     img = Image.new('RGBA', (W, H), (0, 0, 0, 0))

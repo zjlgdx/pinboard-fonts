@@ -9,14 +9,14 @@ an hour later. With no STYLE-WEIGHT, all six fonts, in parallel. With no
 Common causes: a component that is drawn in place on the full 1000 grid
 (爫 雨 宀 冖 罒 ...) squeezed into a flat rect, or a stroke that starts on the
 grid's top edge (y < 30). The pens' jitter depends on the canvas, which is a
-cell wider in the Typewriter, so only this canvas tells.
+cell wider in Yinni, so only this canvas tells.
 """
 import argparse
 import sys
 from concurrent.futures import ProcessPoolExecutor
 import _repo
 
-ALL = [f'{s}-{w}' for s in ('typewriter', 'ballpoint', 'marker') for w in ('regular', 'bold')]
+ALL = [f'{s}-{w}' for s in ('yinni', 'huasha', 'louhen') for w in ('regular', 'bold')]
 
 
 def check(job):

@@ -1,4 +1,4 @@
-"""python tools/hz_grid.py OUT.jpg --batch A.py,B.py [CHARS] [--pen ballpoint] [--size 72] [--per 20]
+"""python tools/hz_grid.py OUT.jpg --batch A.py,B.py [CHARS] [--pen huasha] [--size 72] [--per 20]
 
 A review grid: many characters in one pen, small, numbered by row, to read a
 whole round at a glance. With no CHARS, every character the batches define.
@@ -13,7 +13,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('out')
 ap.add_argument('chars', nargs='?', default='')
 ap.add_argument('--batch', default='')
-ap.add_argument('--pen', default='ballpoint')
+ap.add_argument('--pen', default='huasha')
 ap.add_argument('--bold', action='store_true')
 ap.add_argument('--size', type=int, default=72)
 ap.add_argument('--per', type=int, default=20)

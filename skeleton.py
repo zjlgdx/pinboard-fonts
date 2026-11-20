@@ -129,7 +129,7 @@ MARKS = {
 
 ALL = {**UPPER, **LOWER, **FIGURES, **MARKS}
 
-# Slab serifs the typewriter adds to the same skeletons.
+# Slab serifs Yinni adds to the same skeletons.
 TYPE_SERIFS = {
     '0': 'M258 395 l2 8',   # a dotted zero, so 0 and O never mix in a terminal
     'a': 'M390 750 L460 750',
@@ -464,7 +464,7 @@ BUILT = {
     'ŀ': ('l', 'M330 445 l2 8'),
 }
 
-# Typewriter slabs for those letters, from the letters they grow from.
+# Yinni's slabs for those letters, from the letters they grow from.
 TYPE_SERIFS.update({
     'ı': TYPE_SERIFS['i'], 'ȷ': TYPE_SERIFS['j'], 'ſ': TYPE_SERIFS['f'],
     'ĸ': 'M40 260 L110 260 M40 750 L180 750 M300 270 L440 270 M330 750 L450 750',
@@ -494,7 +494,7 @@ SYMBOLS = {
     '○': circle(300, 460, 215),
 }
 
-# Typewriter only: what a terminal (and Claude Code) prints. Box drawing and
+# Yinni only: what a terminal (and Claude Code) prints. Box drawing and
 # block elements are not drawn with a pen; build.py makes them to fill the cell.
 TERMINAL = {
     '⏺': circle(300, 460, 160, end='F'),
@@ -568,7 +568,7 @@ TERMINAL = {c: scale(d, 1.2, 300, 460) for c, d in TERMINAL.items()}
 LIGHTER.update({'❯': 1.55, '✔': 1.6, '✘': 1.6, '⏸': 1.5, '✢': 0.75, '✳': 0.85, '✶': 0.75, '✻': 0.7, '✽': 0.75,
                 '➜': 1.5, '∗': 0.9, '⧉': 0.85, '⇅': 0.9, '': 0.9, '': 0.9, '': 0.9})
 
-# The Typewriter's own forms of symbols that, drawn as in the proportional
+# Yinni's own forms of symbols that, drawn as in the proportional
 # fonts, came out small in a terminal cell. Arrows run nearly the cell's
 # width (← →) or the cap height (↑ ↓), with heads at 45°; © and ® are ovals
 # as tall as a capital, since a circle that fits the cell's width is far
@@ -590,7 +590,7 @@ MONO['✘'] = MONO['✗']
 # ...and a heavier pen for them, so they don't read as letters (✗ as x).
 MONO_WEIGHT = {c: 1.2 for c in '←→↑↓↔↕✓✗'}
 
-# Glyphs whose shape must not be stretched to fill the typewriter's cell.
+# Glyphs whose shape must not be stretched to fill Yinni's cell.
 KEEP_SHAPE = set(SYMBOLS) | set(TERMINAL) | set('©®¤°•◌') | set(COMBINING_MARKS)
 
 

@@ -4,7 +4,7 @@ fonts: a TypeScript module of compact glyph paths, advances and kerning.
 The desktop app strips fonts embedded in a backdrop SVG, so the board draws
 its labels as <path>s instead. Each letter is drawn once in <defs> and
 placed with <use>. The outlines are re-traced from the same pens with
-stronger smoothing (and the typewriter without its ribbon texture, which
+stronger smoothing (and Yinni without its ribbon texture, which
 can't be seen at label sizes), so they cost few points; advances and
 kerning come from the built fonts.
 
@@ -28,8 +28,8 @@ import build
 import cells
 
 OUT = Path(__file__).resolve().parent / 'out'
-PENS = {'hand': ('ballpoint', 'YisuHuasha'), 'mk': ('marker', 'YisuLouhen'),
-        'type': ('typewriter', 'YisuYinni')}
+PENS = {'hand': ('huasha', 'YisuHuasha'), 'mk': ('louhen', 'YisuLouhen'),
+        'type': ('yinni', 'YisuYinni')}
 GRID = 5        # font units per path unit: 1/200 em
 
 
@@ -91,7 +91,7 @@ def bounds(rec):
 def coarse(style_key, ch, tmp):
     """The letter re-traced smooth, before spacing (font units)."""
     style = build.STYLES[style_key]()
-    if style_key == 'typewriter':
+    if style_key == 'yinni':
         style.ink = lambda img, rng: img          # no ribbon texture at label size
     img = Image.new('L', (int(build.W * build.S), int(build.H * build.S)), 0)
     img = style.draw(ch, img, 0)
@@ -116,8 +116,8 @@ def main():
             # (cells.py), not pen strokes: the font's outline is already exact.
             # Only which characters cells.py draws matters here, not the sizes.
             os2 = font['OS/2']
-            cell = set(cells.glyphs(build.Typewriter.advance, os2.sTypoAscender, os2.sTypoDescender, 80)) \
-                if style_key == 'typewriter' else set()
+            cell = set(cells.glyphs(build.Yinni.advance, os2.sTypoAscender, os2.sTypoDescender, 80)) \
+                if style_key == 'yinni' else set()
             for ch in chars:
                 name = cmap[ord(ch)]
                 adv[ch] = round(hmtx[name][0] / GRID, 1)

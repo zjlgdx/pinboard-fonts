@@ -17,7 +17,7 @@ The checks before a pull request, on the built fonts in OUT_DIR (default out/):
 Exits 1 if any of them fails. The known results, which the README explains,
 are printed, not failed: file size (a WARN past 1 MB, and file_size's
 massive-font FAIL past 9 MB, as a full set of common Chinese characters
-runs past it) and, in the Typewriter, the CFF fonts' glyf error and the
+runs past it) and, in Yinni, the CFF fonts' glyf error and the
 double-width xAvgCharWidth.
 """
 import argparse

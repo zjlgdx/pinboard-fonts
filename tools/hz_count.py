@@ -41,7 +41,7 @@ PIECE = 'only part of its character; the whole counts right'
 TAIWAN = "Taiwan's count (教育部); Unihan gives the mainland's"
 MOE = "drawn from 教育部's frames (polish 6); Unihan's count differs: tools/hz_moe.py checks it"
 KNOWN = {
-    **dict.fromkeys('艹辶廴乏敖延离荒瓦叟敢萧苋及阝之以象巨骨修致', MAINLAND),
+    **dict.fromkeys('艹辶廴乏敖延离荒瓦叟敢萧苋及阝之以象巨骨修致鬼差', MAINLAND),
     **dict.fromkeys(['饰', '赢', '贗', '纏', '𥏻', '瑙', '珡', '荧'], PIECE),
     '莧': "drawn as 萈 for 寬 and 髖 (C['莧'] has its own 11)",
     '𡗗': "左 over 月 (9) as used; Unihan's 5 is the code point's own",

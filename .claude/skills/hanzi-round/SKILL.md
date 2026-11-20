@@ -44,9 +44,9 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
    Traditional character Taiwan's form of every part, a Simplified one the
    mainland's: 䍃 is `K['䍃TW']` (𠂊 and a dot) in 搖 謠 瑤, `K['䍃']` (爫) in
    谣 瑶; 糸, 言, 貝 against 纟, 讠, 贝.
-7. A character both scripts write (花 草 者 偏, and 著 藉, which 通用规范汉字表
-   has too) is drawn in Taiwan's form: `K['艹T']` (十十), `K['者T']`,
-   `K['敖T']`, `K['戶']`. Add it to `_SHARED_TW` at the end of
+7. A character both scripts write (花 草 部 偏, and 著 藉, which 通用规范汉字表
+   has too) is drawn in Taiwan's form: `K['艹T']` (十十), `K['阝T']` and
+   `K['⻏T']` (three strokes), `K['敖T']`, `K['戶']`. Add it to `_SHARED_TW` at the end of
    `hanzi_strokes.py`, which gives it the mainland's form for text tagged
    Simplified Chinese. A Simplified-only character built on a shared one
    draws `_mainland(C['苗'])`. `tools/hz_forms.py` checks both, and
@@ -78,6 +78,21 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
      decide. When a difference is understood, add the part to `KNOWN` in
      `tools/hz_count.py` with the reason, so its list keeps only what nobody
      has looked at yet.
+   - For Traditional characters, count against 教育部 itself:
+     `tools/hz_moe.py COUNTS.json` takes {character: frames}, counted while
+     viewing 筆順學習網's frames in the browser (never save the images), and
+     lists the characters off and the parts most of whose users are off.
+     Polish 6 found 430 this way that Unihan hid. A strip over 16 strokes has
+     two columns, read right column first; a tall character's last frame can
+     spill into an extra slot, so a count one too high needs a look first.
+   - Taiwan forms the standard has and fonts often don't: 阝 is 3 strokes
+     (橫撇, 彎鉤, 豎), 者 has no 點 (8), 艹 is 豎 橫 橫 豎, and 㐬 充 育 have no
+     點 over the 一 (流 9, 充 5). 衣 and the bottoms written like it (表 展 農
+     長 袁 裹 喪 讓) put the small 撇 before the 捺.
+   - A right count is not a right shape: 飞 drawn as 几 and 莫 reading as 其
+     both had the right count. After a round, look at its characters on
+     `tools/hz_grid.py` sheets, not only at the numbers: a wrong part (阝 for
+     卩, 西 for 覀), the other script's form, and parts that collide.
 
 ### What goes wrong, and the fix
 

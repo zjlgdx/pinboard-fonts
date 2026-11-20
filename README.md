@@ -14,8 +14,8 @@
 
 <p align="center">
   <a href="https://github.com/zjlgdx/yisu-fonts/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/zjlgdx/yisu-fonts?label=release&color=b3362b"></a>
-  <a href="OFL.txt"><img alt="Fonts: SIL OFL 1.1" src="https://img.shields.io/badge/fonts-OFL%201.1-1d1c1b"></a>
-  <a href="LICENSE"><img alt="Code: MIT" src="https://img.shields.io/badge/code-MIT-1d1c1b"></a>
+  <a href="LICENSE"><img alt="Fonts: SIL OFL 1.1" src="https://img.shields.io/badge/fonts-OFL%201.1-1d1c1b"></a>
+  <a href="LICENSE-MIT"><img alt="Code: MIT" src="https://img.shields.io/badge/code-MIT-1d1c1b"></a>
   <a href="https://yisu.aixie.de"><img alt="Website" src="https://img.shields.io/badge/see%20them%20write-yisu.aixie.de-d9b45a"></a>
 </p>
 
@@ -48,8 +48,8 @@ The full names are 一粟印泥 Yisu Yinni, 一粟畫沙 Yisu Huasha and 一粟�
 
 | | Covered |
 | --- | --- |
-| **Chinese** | So far, every character in the first 5364 rows of [`hanzi_order.tsv`](hanzi_order.tsv): 6804 in all, Simplified and Traditional, plus 26 for the texts on the website and 31 common Hong Kong Cantonese characters (`嘅 喺 啲 咗 佢 冇 嘢 咁 諗 搵 攞 畀 …`). All of Taiwan's 4,808 common characters, the 3,500 of mainland China's first level and the 5,401 of Big5's first level. Each in its own standard's form: Taiwan's 說, the mainland's 说. |
-| **Kana** | 182 Japanese Hiragana and Katakana characters (basic, dakuten, handakuten, small kana, prolonged sound mark `ー`, and iteration marks). |
+| **Chinese** | So far, every character in the first 5489 rows of [`hanzi_order.tsv`](hanzi_order.tsv): 6929 in all, Simplified and Traditional, plus 26 for the texts on the website and 31 common Hong Kong Cantonese characters (`嘅 喺 啲 咗 佢 冇 嘢 咁 諗 搵 攞 畀 …`). All of Taiwan's 4,808 common characters, the 3,500 of mainland China's first level, the 5,401 of Big5's first level, and the 3,755 of GB 2312's first level. Each in its own standard's form: Taiwan's 說, the mainland's 说. |
+| **Kana** | 182 Japanese Hiragana and Katakana characters (basic, dakuten, handakuten, small kana, prolonged sound mark `ー` with vertical form, and iteration marks). |
 | **Punctuation** | Full-width `。，、；：？！「」『』（）《》〈〉・`, set as Taiwan sets it, or as the mainland does in text tagged Simplified Chinese; forms for vertical text. |
 | **Zhuyin** | All 37 symbols of 注音符號, the Ministry's four extra, and the tone marks. |
 | **Latin** | ASCII, Latin-1 and all of Latin Extended-A: Western, Central European, Baltic, Turkish, Maltese, Welsh and Esperanto, and Romanian `Ș Ț`. Combining marks for any letter. |
@@ -108,9 +108,9 @@ Two scripts serve the [Pinboard](https://github.com/zjlgdx/claude-theme-pinboard
 
 ## Which characters, in what order
 
-Characters are drawn most frequent first, in the order in [`hanzi_order.tsv`](hanzi_order.tsv). `order.py` makes it from the Unicode Han Database ([Unihan](https://www.unicode.org/reports/tr38/), Unicode License v3), facts about characters only. It ranks by kHanyuPinlu, each character's count in the corpus of 《現代漢語頻率詞典》 (1.8 million characters). Each Simplified character's Traditional forms share its row: its kTraditionalVariant forms that are in the first plane of CNS 11643 (kIRG_TSource T1), Taiwan's common characters. The first 5,364 rows are 6,804 characters across both scripts, and cover 100.0% of the corpus.
+Characters are drawn most frequent first, in the order in [`hanzi_order.tsv`](hanzi_order.tsv). `order.py` makes it from the Unicode Han Database ([Unihan](https://www.unicode.org/reports/tr38/), Unicode License v3), facts about characters only. It ranks by kHanyuPinlu, each character's count in the corpus of 《現代漢語頻率詞典》 (1.8 million characters). Each Simplified character's Traditional forms share its row: its kTraditionalVariant forms that are in the first plane of CNS 11643 (kIRG_TSource T1), Taiwan's common characters. The first 5,489 rows are 6,929 characters across both scripts, and cover 100.0% of the corpus.
 
-The corpus list ends at row 2,849. After it, with a count of 0, come the characters the fonts still owed: the rest of the first level of mainland China's 通用规范汉字表 (Unihan kTGH, index 1–3500), and the rest of Taiwan's 常用國字標準字體表, the Ministry of Education's 4,808 common characters (1982). They are sorted by radical, then strokes (kRSUnicode), so one round draws a radical's family. A character only Taiwan's list has gets `-` for a Simplified form the first level doesn't hold. The 4,808 are in [`moe_4808.tsv`](moe_4808.tsv): each one's MOE number and code point, from the [Wikisource transcription](https://zh.wikisource.org/wiki/常用國字標準字體表), public domain under Article 9 of Taiwan's Copyright Act, checked against the Ministry's own list (`4808.pdf`, 2026): the same code points in the same order. Number A02149 is coded 汩 there but printed 汨, so both are drawn. Rows 4,824–5,364 are the rest of the first level of Big5 (Unihan kBigFive A440–C67E): its 5,401 common characters, the Traditional set of text from older systems, sorted the same way. Their Simplified column holds the mainland's form when 通用规范汉字表 lists it at any level and it has no row of its own; otherwise `-`. Drawn so far: 4,808 of Taiwan's 4,808, 3,500 of the first level's 3,500 and 5,401 of Big5's 5,401.
+The corpus list ends at row 2,849. After it, with a count of 0, come the characters the fonts still owed: the rest of the first level of mainland China's 通用规范汉字表 (Unihan kTGH, index 1–3500), and the rest of Taiwan's 常用國字標準字體表, the Ministry of Education's 4,808 common characters (1982). They are sorted by radical, then strokes (kRSUnicode), so one round draws a radical's family. A character only Taiwan's list has gets `-` for a Simplified form the first level doesn't hold. The 4,808 are in [`moe_4808.tsv`](moe_4808.tsv): each one's MOE number and code point, from the [Wikisource transcription](https://zh.wikisource.org/wiki/常用國字標準字體表), public domain under Article 9 of Taiwan's Copyright Act, checked against the Ministry's own list (`4808.pdf`, 2026): the same code points in the same order. Number A02149 is coded 汩 there but printed 汨, so both are drawn. Rows 4,824–5,364 are the rest of the first level of Big5 (Unihan kBigFive A440–C67E): its 5,401 common characters, the Traditional set of text from older systems, sorted the same way. Their Simplified column holds the mainland's form when 通用规范汉字表 lists it at any level and it has no row of its own; otherwise `-`. Drawn so far: 4,808 of Taiwan's 4,808, 3,500 of the first level's 3,500 and 5,401 of Big5's 5,401. Rows 5,365–5,489 are the rest of the first level of GB 2312 (Unihan kGB0, rows 16–55), the Simplified set of text from older systems: 125 characters, mostly chemistry and place names (胺 醛 邯), that the corpus and 通用规范汉字表's first level leave out. All 3,755 are drawn.
 
 Past both lists, a character is drawn when a text set in the fonts needs it. There are 26 so far, in their Traditional forms: `禊 暎 俛` for 王羲之's 《蘭亭集序》, `蜉 蝣` for 蘇軾's 《前赤壁賦》, and `軫 棨 襜 驂 騑 闥 甍 紆 舸 舳 鶩 遄 睢 鄴 睇 眄 溟 閽 愨 笏 滕` for 王勃's 《滕王閣序》. Five of them, `甍 紆 睢 鄴 滕`, are in Big5 and so are also rows past 4,823, drawn ahead of their round; the rest are not rows of `hanzi_order.tsv`. The rows' count above leaves all 26 out until a round reaches them.
 
@@ -190,4 +190,4 @@ The fonts were drawn for [Pinboard](https://github.com/zjlgdx/claude-theme-pinbo
 
 ## Licence
 
-The fonts are under the [SIL Open Font License 1.1](OFL.txt): free to use, change and share, in personal and commercial work, and to bundle with software; they can't be sold on their own. The build scripts are under the [MIT License](LICENSE).
+The fonts are under the [SIL Open Font License 1.1](LICENSE): free to use, change and share, in personal and commercial work, and to bundle with software; they can't be sold on their own. The build scripts are under the [MIT License](LICENSE-MIT).

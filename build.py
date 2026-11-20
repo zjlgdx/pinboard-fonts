@@ -88,7 +88,7 @@ OUT = HERE / 'out'
 CACHE_DIR = HERE / 'work' / 'cache'
 CACHE_VER = 1           # bump when rendering/tracing algorithm changes
 
-VERSION = 0.810         # head.fontRevision; nameID 5 says the same
+VERSION = 0.840         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents
@@ -365,9 +365,11 @@ class Style:
     def draw_hanzi(self, ch, img, variant=0):
         """Chinese in this family's cut (hanzi.CUTS): the family's own pen,
         or its own nib, along the character's strokes. Variant 1 is the
-        form mainland China sets in a line (hanzi.ZHS), 2 in a column (hanzi.VZHS)."""
+        form mainland China sets in a line (hanzi.ZHS), 2 in a column (hanzi.VZHS),
+        or a vertical-only alternate (hanzi.VERT_ALT, e.g. ー)."""
         cut = hanzi.CUTS[self.key]
-        strokes, warp, rng = hanzi.placed(ch, self.key, cut['em'] / K, K, seed_for(self.seed, ch), form=variant)
+        form = 3 if (variant == 1 and ch in hanzi.VERT_ALT) else variant
+        strokes, warp, rng = hanzi.placed(ch, self.key, cut['em'] / K, K, seed_for(self.seed, ch), form=form)
         pen = cut['pen'][1 if self.bold else 0] * hanzi.density_scale(ch, strokes, self.bold)
         draw = ImageDraw.Draw(img)
         if cut['nib'] is None:
@@ -840,6 +842,8 @@ def suffix(ch, variant):
         return ''
     if ch in hanzi.ZHS:
         return ('.zhs', '.zhs.vert')[variant - 1]
+    if ch in hanzi.VERT_ALT:
+        return '.vert'
     return '.case' if ch in COMBINING_MARKS else f'.alt{variant}'
 
 
@@ -1044,6 +1048,7 @@ def features(style, glyphs, pairs, anchors):
     # In a column: brackets turned, and the mainland's marks moved (after locl).
     vert = [(glyph_name(h), glyph_name(v)) for h, v in hanzi.VERTICAL.items() if glyph_name(v) in glyphs]
     vert += sorted((n[:-5], n) for n in glyphs if n.endswith('.zhs.vert'))
+    vert += sorted((n[:-5], n) for n in glyphs if n.endswith('.vert') and not n.endswith('.zhs.vert'))
     if vert:
         fea += ['feature vert {'] + [f'  sub {a} by {b};' for a, b in vert] + ['} vert;']
     fea += cjk_spacing(style, glyphs)
@@ -1135,11 +1140,17 @@ def glyph_cache_key(style, ch, v, smooth):
     """Stable hash of inputs that affect one glyph's traced outline and profile."""
     h = hashlib.sha256()
     if ch in hanzi.C:
-        spec = repr((hanzi.C, hanzi.ZHS, hanzi.VZHS)[v][ch])
-        extra = repr(hanzi.CUTS[style.key])
+        form = 3 if (v == 1 and ch in hanzi.VERT_ALT) else v
+        spec = repr((hanzi.C, hanzi.ZHS, hanzi.VZHS, hanzi.VERT_ALT)[form][ch])
+        extra = repr((hanzi.CUTS[style.key],
+                      getattr(style, 'radius', None),
+                      getattr(style, 'half_w', None), getattr(style, 'half_t', None)))
     else:
         spec = repr(style.parts(ch, v))
-        extra = repr((getattr(style, 'radius', None), getattr(style, 'nib_w', None),
+        extra = repr((getattr(style, 'radius', None),
+                      getattr(style, 'half_w', None), getattr(style, 'half_t', None),
+                      getattr(style, 'dot', None), getattr(style, 'reach', None),
+                      getattr(style, 'ring', None), getattr(style, 'hook', None),
                       getattr(style, 'widen', 1.0), style.lean))
     h.update(f'{CACHE_VER}|{style.key}|{style.bold}|{style.speck}|{smooth}|{ch}|{v}|{spec}|{extra}'.encode('utf-8'))
     return h.digest()[:16]
@@ -1198,6 +1209,8 @@ def make(style, shared=None, use_cache=None):
         if ch in hanzi.ZHS:
             # as mainland China sets it in a line, `.zhs`, and in a column, `.zhs.vert`
             variants = 2 if ch in hanzi.VZHS else 1
+        elif ch in hanzi.VERT_ALT:
+            variants = 1        # vertical-only form, `.vert` (e.g. ー)
         smooth = getattr(style, 'hanzi_smooth', style.smooth) if ch in hanzi.C else style.smooth
         for v in range(variants + 1):
             name = glyph_name(ch) + suffix(ch, v)
@@ -1490,7 +1503,7 @@ def autohint(font):
     # rather than snap its strokes to the x-height and cap height.
     cell += sorted({cmap[cp] for cp in cmap if chr(cp) in hanzi.C})
     cell += sorted(n for n in font.getGlyphOrder()
-                   if '.zhs' in n or n.endswith(('.arrow_r', '.arrow_l', '.fat_r', '.neq', '.lte', '.gte')))
+                   if '.zhs' in n or n.endswith(('.vert', '.arrow_r', '.arrow_l', '.fat_r', '.neq', '.lte', '.gte')))
     with tempfile.TemporaryDirectory() as t:
         src, dst = Path(t) / 'in.otf', Path(t) / 'out.otf'
         font.save(src)

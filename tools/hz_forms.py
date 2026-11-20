@@ -2,7 +2,7 @@
 
 Checks that each character is drawn in its own script's form of the parts
 Taiwan and the mainland write differently (hanzi_strokes._TW_PARTS: 艹 as
-十十 or 一 across, 者 and 敖 with or without the 點, 戶 or 户):
+十十 or 一 across, 敖 with or without the 點, 戶 or 户, 阝 in three strokes or two):
 
 - a character both scripts write (shared) that uses a Taiwan part has a ZHS
   form, and that form is the drawing with the mainland's parts;

@@ -47,7 +47,11 @@ What follows the usual type-design rules (see README.md for sources):
     charstrings smaller
 """
 
+import hashlib
+import io
 import math
+import os
+import pickle
 import random
 import re
 import unicodedata
@@ -80,6 +84,8 @@ from skeleton import (ACCENTED, ALL, ANCHOR, COMBINING_MARKS, KEEP_SHAPE, base_a
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / 'out'
+CACHE_DIR = HERE / 'work' / 'cache'
+CACHE_VER = 1           # bump when rendering/tracing algorithm changes
 
 VERSION = 0.810         # head.fontRevision; nameID 5 says the same
 
@@ -361,7 +367,7 @@ class Style:
         form mainland China sets in a line (hanzi.ZHS), 2 in a column (hanzi.VZHS)."""
         cut = hanzi.CUTS[self.key]
         strokes, warp, rng = hanzi.placed(ch, self.key, cut['em'] / K, K, seed_for(self.seed, ch), form=variant)
-        pen = cut['pen'][1 if self.bold else 0]
+        pen = cut['pen'][1 if self.bold else 0] * hanzi.density_scale(ch, strokes, self.bold)
         draw = ImageDraw.Draw(img)
         if cut['nib'] is None:
             # A broad nib makes its own thick and thin; dots are its short dabs.
@@ -505,6 +511,9 @@ class Yinni(Style):
     # outline points: they vanish at any size the font is read at.
     speck = 2200
     smooth = (1.2, '0.8')
+    # Slightly smoother tracing on 6,800+ Chinese glyphs keeps Yinni's ribbon feel
+    # while trimming redundant micro-nodes from the .otf outline.
+    hanzi_smooth = (1.5, '1.15')
 
     def __init__(self, bold=False):
         super().__init__(bold)
@@ -595,17 +604,17 @@ TRANSFORM = re.compile(r'translate\(([-\d.]+),([-\d.]+)\)\s*scale\(([-\d.]+),([-
 D_ATTR = re.compile(r'\sd="([^"]+)"')
 
 
-def trace(img, tmp, speck, smooth):
+def trace(img, tmp=None, speck=24, smooth=(3.0, '1.2')):
     """Bitmap (white ink on black) -> RecordingPen in font units."""
     # A light blur before the threshold smooths the stamped pen's edge, so
     # potrace fits long curves instead of many short ones.
     soft = np.asarray(img.filter(ImageFilter.GaussianBlur(smooth[0])))
     bw = Image.fromarray(np.where(soft > 127, 0, 255).astype(np.uint8)).convert('1')
-    pbm, svg = tmp / 'g.pbm', tmp / 'g.svg'
-    bw.save(pbm)
-    subprocess.run(['potrace', '-b', 'svg', '-t', str(speck), '-a', '1.0', '-O', smooth[1],
-                    '-o', str(svg), str(pbm)], check=True)
-    text = svg.read_text()
+    buf = io.BytesIO()
+    bw.save(buf, format='PPM')
+    proc = subprocess.run(['potrace', '-b', 'svg', '-t', str(speck), '-a', '1.0', '-O', smooth[1], '-o', '-'],
+                          input=buf.getvalue(), stdout=subprocess.PIPE, check=True)
+    text = proc.stdout.decode('utf-8')
     rec = RecordingPen()
     m = TRANSFORM.search(text)
     if not m:
@@ -1090,39 +1099,80 @@ def canvas(style, ch):
     return Image.new('L', (int((W + wide) * S), int(H * S)), 0)
 
 
-def make(style, shared=None):
+def glyph_cache_key(style, ch, v, smooth):
+    """Stable hash of inputs that affect one glyph's traced outline and profile."""
+    h = hashlib.sha256()
+    if ch in hanzi.C:
+        spec = repr((hanzi.C, hanzi.ZHS, hanzi.VZHS)[v][ch])
+        extra = repr(hanzi.CUTS[style.key])
+    else:
+        spec = repr(style.parts(ch, v))
+        extra = repr((style.radius, getattr(style, 'widen', 1.0), style.lean))
+    h.update(f'{CACHE_VER}|{style.key}|{style.bold}|{style.speck}|{smooth}|{ch}|{v}|{spec}|{extra}'.encode('utf-8'))
+    return h.digest()[:16]
+
+
+def make(style, shared=None, use_cache=None):
     """One font of a family. `shared` carries the Regular's vertical metrics,
     so both weights set lines alike."""
     family = style.family
     ps = family.replace(' ', '') + '-' + style.weight
     slant = math.tan(math.radians(style.lean))
+    if use_cache is None:
+        use_cache = not os.environ.get('YISU_NO_CACHE')
+
+    cache_path = CACHE_DIR / f'{ps}.pkl'
+    cache = {}
+    if use_cache and cache_path.exists():
+        try:
+            cache = pickle.loads(cache_path.read_bytes())
+        except Exception:
+            cache = {}
+    cache_dirty = False
+    cache_hits = 0
 
     glyphs = {}          # name -> dict(rec, adv, left, right, ...)
     by_char = {}         # char -> its default glyph's entry
-    with tempfile.TemporaryDirectory() as t:
-        tmp = Path(t)
-        for ch in charset(style.mono) + list(hanzi.C):
-            variants = style.alternates if kind(ch) == 'lower' else 0
-            if ch in COMBINING_MARKS and ANCHOR[COMBINING_MARKS[ch]] == 'top':
-                variants = 1        # the capital form, `.case`
-            if ch in hanzi.ZHS:
-                # as mainland China sets it in a line, `.zhs`, and in a column, `.zhs.vert`
-                variants = 2 if ch in hanzi.VZHS else 1
-            for v in range(variants + 1):
+    for ch in charset(style.mono) + list(hanzi.C):
+        variants = style.alternates if kind(ch) == 'lower' else 0
+        if ch in COMBINING_MARKS and ANCHOR[COMBINING_MARKS[ch]] == 'top':
+            variants = 1        # the capital form, `.case`
+        if ch in hanzi.ZHS:
+            # as mainland China sets it in a line, `.zhs`, and in a column, `.zhs.vert`
+            variants = 2 if ch in hanzi.VZHS else 1
+        smooth = getattr(style, 'hanzi_smooth', style.smooth) if ch in hanzi.C else style.smooth
+        for v in range(variants + 1):
+            name = glyph_name(ch) + suffix(ch, v)
+            ckey = glyph_cache_key(style, ch, v, smooth) if use_cache else None
+            hit = cache.get(name) if ckey is not None else None
+            if hit is not None and hit[0] == ckey:
+                rec = RecordingPen()
+                rec.value = list(hit[1])
+                left, right = hit[2], hit[3]
+                cache_hits += 1
+            else:
                 img = canvas(style, ch)
                 img = style.draw(ch, img, v)
                 edge = np.asarray(img)
                 if edge[:2].any() or edge[-2:].any() or edge[:, :2].any() or edge[:, -2:].any():
                     print(f'  {ch!r}: ink reaches the edge of the canvas, and is cut off')
-                rec = without_specks(trace(img, tmp, style.speck, style.smooth))
+                rec = without_specks(trace(img, None, style.speck, smooth))
                 if bounds(rec) is None:
                     print(f'  {ch!r}: empty, skipped')
                     continue
                 left, right = profile(img, slant)
-                name = glyph_name(ch) + suffix(ch, v)
-                glyphs[name] = {'ch': ch, 'rec': rec, 'left': left, 'right': right, 'variant': v}
-                if v == 0:
-                    by_char[ch] = glyphs[name]
+                if ckey is not None:
+                    cache[name] = (ckey, list(rec.value), left, right)
+                    cache_dirty = True
+            glyphs[name] = {'ch': ch, 'rec': rec, 'left': left, 'right': right, 'variant': v}
+            if v == 0:
+                by_char[ch] = glyphs[name]
+
+    if use_cache and cache_dirty:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        cache_path.write_bytes(pickle.dumps(cache, protocol=pickle.HIGHEST_PROTOCOL))
+    if use_cache and cache_hits:
+        print(f'  {ps}: {cache_hits}/{len(glyphs)} glyphs from cache')
 
     # The skeleton's baseline is the pen's centre line, so half of every flat
     # stroke hangs below it. Lift the whole font by what its pen reaches below
@@ -1405,5 +1455,8 @@ def build(key):
 
 
 if __name__ == '__main__':
-    for key in (sys.argv[1:] or list(STYLES)):
+    args = [a for a in sys.argv[1:] if a != '--no-cache']
+    if '--no-cache' in sys.argv[1:]:
+        os.environ['YISU_NO_CACHE'] = '1'
+    for key in (args or list(STYLES)):
         build(key)

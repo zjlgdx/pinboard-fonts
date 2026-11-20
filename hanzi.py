@@ -130,14 +130,38 @@ def flatten(item, box=(0, 0, 1000, 1000)):
         return [(k, transform(d, lambda p: (x0 + p[0] * sx, y0 + p[1] * sy))) for k, d in item]
     op = item[0]
     if op == 'lr':
-        _, a, b, r = item
-        return flatten(a, into((0, 0, 1000 * r, 1000))) + flatten(b, into((1000 * r, 0, 1000, 1000)))
+        _, a, b, r = item[:4]
+        gap = item[4] if len(item) > 4 else 0
+        mid = 1000 * r
+        return (flatten(a, into((0, 0, mid - gap / 2, 1000)))
+                + flatten(b, into((mid + gap / 2, 0, 1000, 1000))))
     if op == 'tb':
-        _, a, b, r = item
-        return flatten(a, into((0, 0, 1000, 1000 * r))) + flatten(b, into((0, 1000 * r, 1000, 1000)))
+        _, a, b, r = item[:4]
+        gap = item[4] if len(item) > 4 else 0
+        mid = 1000 * r
+        return (flatten(a, into((0, 0, 1000, mid - gap / 2)))
+                + flatten(b, into((0, mid + gap / 2, 1000, 1000))))
     if op == 'box':
         return [s for part, b in item[1] for s in flatten(part, into(b))]
     raise ValueError(op)
+
+
+def density_scale(ch, strokes, bold=False):
+    """Optical pen-width compensation by stroke count for CJK ideographs.
+    Sparse characters (e.g. 一, 十, 人) get a slight boost so they don't look
+    faint in running text; dense characters (15+ strokes) thin slightly so
+    counters stay open, especially in Bold."""
+    cp = ord(ch)
+    if not (0x3400 <= cp <= 0x9FFF or 0xF900 <= cp <= 0xFAFF):
+        return 1.0
+    n = len(strokes)
+    if n <= 6:
+        boost = 0.04 if bold else 0.06
+        return 1.0 + boost * (1.0 - ease(1, 7, n))
+    if n >= 11:
+        thin = 0.12 if bold else 0.08
+        return 1.0 - thin * ease(10, 24, n)
+    return 1.0
 
 
 _START = re.compile(r'M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)')
@@ -145,10 +169,14 @@ _START = re.compile(r'M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)')
 
 def by_hand(strokes, rng, amount):
     """Each stroke shifted, turned and sized a little about where it starts,
-    as a hand's strokes stray: the character stays itself, the parts loosen."""
+    as a hand's strokes stray: the character stays itself, the parts loosen.
+    Dense characters dampen jitter smoothly to avoid unintended collisions."""
     from skeleton import transform
     if not amount:
         return strokes
+    n = len(strokes)
+    if n > 8:
+        amount = amount * max(0.45, 1.0 / (1.0 + (n - 8) * 0.055))
     out = []
     for kind, d in strokes:
         sx, sy = map(float, _START.search(d).groups())

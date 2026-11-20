@@ -58,6 +58,7 @@ import unicodedata
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -1060,6 +1061,37 @@ def features(style, glyphs, pairs, anchors):
         rules += [f"  sub @cycle{v} @cycle0' lookup to_alt{v + 1};" for v in range(style.alternates - 1, 0, -1)]
         rules.append("  sub @cycle0 @cycle0' lookup to_alt1;")
         fea += ['feature calt {'] + rules + ['} calt;']
+    elif style.mono and 'hyphen.arrow_r' in glyphs:
+        # Monospace-safe programming ligatures (each half stays 1 cell wide).
+        fea += [
+            '@lig_op = [hyphen greater less equal exclam];',
+            'feature calt {',
+            "  ignore sub @lig_op hyphen' greater;",
+            "  ignore sub hyphen' greater @lig_op;",
+            "  sub hyphen' greater by hyphen.arrow_r;",
+            "  sub hyphen.arrow_r greater' by greater.arrow_r;",
+            "  ignore sub @lig_op less' hyphen;",
+            "  ignore sub less' hyphen @lig_op;",
+            "  sub less' hyphen by less.arrow_l;",
+            "  sub less.arrow_l hyphen' by hyphen.arrow_l;",
+            "  ignore sub @lig_op equal' greater;",
+            "  ignore sub equal' greater @lig_op;",
+            "  sub equal' greater by equal.fat_r;",
+            "  sub equal.fat_r greater' by greater.fat_r;",
+            "  ignore sub @lig_op exclam' equal;",
+            "  ignore sub exclam' equal @lig_op;",
+            "  sub exclam' equal by exclam.neq;",
+            "  sub exclam.neq equal' by equal.neq;",
+            "  ignore sub @lig_op less' equal;",
+            "  ignore sub less' equal @lig_op;",
+            "  sub less' equal by less.lte;",
+            "  sub less.lte equal' by equal.lte;",
+            "  ignore sub @lig_op greater' equal;",
+            "  ignore sub greater' equal @lig_op;",
+            "  sub greater' equal by greater.gte;",
+            "  sub greater.gte equal' by equal.gte;",
+            '} calt;',
+        ]
     if pairs:
         variants = {}
         for name, g in glyphs.items():
@@ -1107,9 +1139,34 @@ def glyph_cache_key(style, ch, v, smooth):
         extra = repr(hanzi.CUTS[style.key])
     else:
         spec = repr(style.parts(ch, v))
-        extra = repr((style.radius, getattr(style, 'widen', 1.0), style.lean))
+        extra = repr((getattr(style, 'radius', None), getattr(style, 'nib_w', None),
+                      getattr(style, 'widen', 1.0), style.lean))
     h.update(f'{CACHE_VER}|{style.key}|{style.bold}|{style.speck}|{smooth}|{ch}|{v}|{spec}|{extra}'.encode('utf-8'))
     return h.digest()[:16]
+
+
+_WORKER_STYLE = None
+_WORKER_SLANT = 0.0
+
+
+def _init_worker(key, bold):
+    global _WORKER_STYLE, _WORKER_SLANT
+    _WORKER_STYLE = STYLES[key](bold=bold)
+    _WORKER_SLANT = math.tan(math.radians(_WORKER_STYLE.lean))
+
+
+def _render_glyph(job):
+    ch, v, smooth = job
+    style = _WORKER_STYLE
+    img = canvas(style, ch)
+    img = style.draw(ch, img, v)
+    edge = np.asarray(img)
+    cut_off = bool(edge[:2].any() or edge[-2:].any() or edge[:, :2].any() or edge[:, -2:].any())
+    rec = without_specks(trace(img, None, style.speck, smooth))
+    if bounds(rec) is None:
+        return ch, v, cut_off, None, None, None
+    left, right = profile(img, _WORKER_SLANT)
+    return ch, v, cut_off, list(rec.value), left, right
 
 
 def make(style, shared=None, use_cache=None):
@@ -1133,6 +1190,7 @@ def make(style, shared=None, use_cache=None):
 
     glyphs = {}          # name -> dict(rec, adv, left, right, ...)
     by_char = {}         # char -> its default glyph's entry
+    pending = []         # (name, ckey, ch, v, smooth)
     for ch in charset(style.mono) + list(hanzi.C):
         variants = style.alternates if kind(ch) == 'lower' else 0
         if ch in COMBINING_MARKS and ANCHOR[COMBINING_MARKS[ch]] == 'top':
@@ -1150,20 +1208,32 @@ def make(style, shared=None, use_cache=None):
                 rec.value = list(hit[1])
                 left, right = hit[2], hit[3]
                 cache_hits += 1
+                glyphs[name] = {'ch': ch, 'rec': rec, 'left': left, 'right': right, 'variant': v}
+                if v == 0:
+                    by_char[ch] = glyphs[name]
             else:
-                img = canvas(style, ch)
-                img = style.draw(ch, img, v)
-                edge = np.asarray(img)
-                if edge[:2].any() or edge[-2:].any() or edge[:, :2].any() or edge[:, -2:].any():
-                    print(f'  {ch!r}: ink reaches the edge of the canvas, and is cut off')
-                rec = without_specks(trace(img, None, style.speck, smooth))
-                if bounds(rec) is None:
-                    print(f'  {ch!r}: empty, skipped')
-                    continue
-                left, right = profile(img, slant)
-                if ckey is not None:
-                    cache[name] = (ckey, list(rec.value), left, right)
-                    cache_dirty = True
+                pending.append((name, ckey, ch, v, smooth))
+
+    if pending:
+        workers = min(12, os.cpu_count() or 4)
+        jobs = [(ch, v, smooth) for _name, _ckey, ch, v, smooth in pending]
+        if workers > 1 and len(jobs) >= 32:
+            with ProcessPoolExecutor(workers, initializer=_init_worker, initargs=(style.key, style.bold)) as pool:
+                results = list(pool.map(_render_glyph, jobs, chunksize=16))
+        else:
+            _init_worker(style.key, style.bold)
+            results = [_render_glyph(j) for j in jobs]
+        for (name, ckey, ch, v, _smooth), (_ch, _v, cut_off, rec_val, left, right) in zip(pending, results):
+            if cut_off:
+                print(f'  {ch!r}: ink reaches the edge of the canvas, and is cut off')
+            if rec_val is None:
+                print(f'  {ch!r}: empty, skipped')
+                continue
+            rec = RecordingPen()
+            rec.value = rec_val
+            if ckey is not None:
+                cache[name] = (ckey, rec_val, left, right)
+                cache_dirty = True
             glyphs[name] = {'ch': ch, 'rec': rec, 'left': left, 'right': right, 'variant': v}
             if v == 0:
                 by_char[ch] = glyphs[name]
@@ -1284,13 +1354,17 @@ def make(style, shared=None, use_cache=None):
         own, stack = style.anchors(ch, v)
         anchors[name] = ({c: font_pt(p) for c, p in own.items()}, {c: font_pt(p) for c, p in stack.items()})
 
-    # Box drawing and blocks, made to the cell (Yinni only).
+    # Box drawing, blocks and programming ligatures, made to the cell (Yinni only).
     if style.mono:
         light = round(2 * style.radius * K / 2) * 2
+        nan = np.full(ROWS.shape, np.nan)
         for ch, rec in cells.glyphs(style.advance, TYPO_ASC, TYPO_DESC, light).items():
-            nan = np.full(ROWS.shape, np.nan)
             glyphs[glyph_name(ch)] = {'ch': ch, 'rec': rec, 'left': nan, 'right': nan, 'variant': 0,
                                       'adv': style.advance, 'dx': 0, 'cell': True}
+        y_mid = round((BASE - 460) * K) + lift
+        for name, (ch, rec) in cells.ligatures(style.advance, y_mid, light).items():
+            glyphs[name] = {'ch': ch, 'rec': rec, 'left': nan, 'right': nan, 'variant': 1,
+                            'adv': style.advance, 'dx': 0, 'cell': True}
 
     pairs = {}
     if not style.mono:
@@ -1415,7 +1489,8 @@ def autohint(font):
     # Chinese has its own lines, not the Latin's blue zones: leave it unhinted
     # rather than snap its strokes to the x-height and cap height.
     cell += sorted({cmap[cp] for cp in cmap if chr(cp) in hanzi.C})
-    cell += sorted(n for n in font.getGlyphOrder() if '.zhs' in n)
+    cell += sorted(n for n in font.getGlyphOrder()
+                   if '.zhs' in n or n.endswith(('.arrow_r', '.arrow_l', '.fat_r', '.neq', '.lte', '.gte')))
     with tempfile.TemporaryDirectory() as t:
         src, dst = Path(t) / 'in.otf', Path(t) / 'out.otf'
         font.save(src)

@@ -53,4 +53,4 @@ Releases 0.430 and 0.431 shipped a terminal build, Pinboard Typewriter NF CN, wh
 
 ## Licence
 
-The fonts are under the SIL Open Font License 1.1 (`OFL.txt`); the code is under MIT (`LICENSE`).
+The fonts are under the SIL Open Font License 1.1 (`LICENSE`); the code is under MIT (`LICENSE-MIT`).

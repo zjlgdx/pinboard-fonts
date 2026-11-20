@@ -36,6 +36,11 @@ Then, sorted the same way after those, the rest of Big5's first level
 (kBigFive A440-C67E, 5,401 common characters; none has a count). The
 Simplified column holds the mainland's form (kSimplifiedVariant) when
 通用规范汉字表 lists it at any level and it has no row yet, else '-'.
+
+Last, sorted the same way, the rest of GB 2312's first level (kGB0 rows
+16-55, 3,755 characters), with their Traditional forms as above: chemistry
+and place names (胺 醛 邯) that the corpus and 通用规范汉字表's first level
+leave out, but Simplified text still uses.
 """
 import re
 import sys
@@ -68,6 +73,13 @@ def big5_level_1(folder):
     out = {ch for ch, v in fields(folder, 'Unihan_OtherMappings.txt', 'kBigFive').items()
            if "'" not in v and 'A440' <= v <= 'C67E'}
     assert len(out) == 5401, len(out)
+    return out
+
+
+def gb2312_level_1(folder):
+    """GB 2312's first level: kGB0 rows 16-55 (codes 1601-5589)."""
+    out = {ch for ch, v in fields(folder, 'Unihan_OtherMappings.txt', 'kGB0').items() if 16 <= int(v[:2]) <= 55}
+    assert len(out) == 3755, len(out)
     return out
 
 
@@ -131,12 +143,20 @@ def main(folder, moe_path=Path(__file__).with_name('moe_4808.tsv')):
         big5.append((ch, 0, [t]))
         seen |= {t, ch} - {"-"}
     rows += big5
+
+    # Last: the rest of GB 2312's first level, with Taiwan's forms.
+    gb = []
+    for ch in sorted(gb2312_level_1(folder) - seen, key=lambda c: (radical_strokes(rs[c]), ord(c))):
+        gb.append((ch, 0, forms_of(ch)))
+        seen |= {ch, *forms_of(ch)}
+    rows += gb
     head = (Path(folder) / 'Unihan_Readings.txt').read_text(encoding='utf-8').splitlines()[:6]
     version = next(line[2:] for line in head if line.startswith('# Unicode Version'))
     print(f'# Chinese characters by frequency, from the Unicode Han Database (Unihan), {version}.')
     print('# Made by order.py: kHanyuPinlu counts, kTraditionalVariant and kIRG_TSource T1 forms, kTGH level 1;')
     print('# then, with count 0, the rest of level 1 and of moe_4808.tsv, by kRSUnicode;')
-    print("# then the rest of Big5's first level (kBigFive A440-C67E), by kRSUnicode, with kTGH Simplified forms.")
+    print("# then the rest of Big5's first level (kBigFive A440-C67E), by kRSUnicode, with kTGH Simplified forms;")
+    print("# then the rest of GB 2312's first level (kGB0 rows 16-55), by kRSUnicode, with Taiwan's forms.")
     print('# Unihan: Copyright © 1991-2026 Unicode, Inc. Unicode License v3, https://www.unicode.org/license.txt')
     print('# rank\tcount\tsimplified\ttraditional\ttgh-level-1')
     def index(ch):

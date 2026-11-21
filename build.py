@@ -376,7 +376,7 @@ class Style:
         cut = hanzi.CUTS[self.key]
         form = 3 if (variant == 1 and ch in hanzi.VERT_ALT) else variant
         strokes, warp, rng = hanzi.placed(ch, self.key, cut['em'] / K, K, seed_for(self.seed, ch), form=form)
-        pen = cut['pen'][1 if self.bold else 0]
+        pen = cut['pen'][1 if self.bold else 0] * hanzi.density_scale(ch, strokes, self.bold)
         draw = ImageDraw.Draw(img)
         if cut['nib'] is None:
             # A broad nib makes its own thick and thin; dots are its short dabs.

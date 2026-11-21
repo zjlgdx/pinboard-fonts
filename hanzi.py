@@ -140,15 +140,36 @@ def flatten(item, box=(0, 0, 1000, 1000)):
     raise ValueError(op)
 
 
+def density_scale(ch, strokes, bold=False):
+    """The pen's width for a Chinese character, by how many strokes it has: a
+    character of a few strokes (一 十 人) a little wider, up to 6% (4% in Bold),
+    so it is not faint beside its neighbours; one of many (鬱 靈 讓) a little
+    narrower, down to 8% (12% in Bold), so its spaces stay open. Characters of
+    7 to 10 strokes keep the pen as it is. Kana and punctuation are left alone."""
+    cp = ord(ch)
+    if not (0x3400 <= cp <= 0x9FFF or 0xF900 <= cp <= 0xFAFF or 0x20000 <= cp <= 0x3FFFF):
+        return 1.0      # CJK Unified (with Extension A and B onward) and Compatibility only
+    n = len(strokes)
+    if n <= 6:
+        return 1.0 + (0.04 if bold else 0.06) * (1.0 - ease(1, 7, n))
+    if n >= 11:
+        return 1.0 - (0.12 if bold else 0.08) * ease(10, 24, n)
+    return 1.0
+
+
 _START = re.compile(r'M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)')
 
 
 def by_hand(strokes, rng, amount):
     """Each stroke shifted, turned and sized a little about where it starts,
-    as a hand's strokes stray: the character stays itself, the parts loosen."""
+    as a hand's strokes stray: the character stays itself, the parts loosen.
+    Past 8 strokes they stray less (two thirds as much at 18, never under 45%), so close parts don't
+    run into each other."""
     from skeleton import transform
     if not amount:
         return strokes
+    if len(strokes) > 8:
+        amount *= max(0.45, 1.0 / (1.0 + (len(strokes) - 8) * 0.055))
     out = []
     for kind, d in strokes:
         sx, sy = map(float, _START.search(d).groups())

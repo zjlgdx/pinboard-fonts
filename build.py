@@ -88,7 +88,7 @@ OUT = HERE / 'out'
 CACHE_DIR = HERE / 'work' / 'cache'
 CACHE_VER = 1           # bump when rendering/tracing algorithm changes
 
-VERSION = 0.840         # head.fontRevision; nameID 5 says the same
+VERSION = 0.850         # head.fontRevision; nameID 5 says the same
 
 S = 2.0                 # bitmap pixels per skeleton unit
 X0, Y0 = -200, -300     # bitmap origin, in skeleton units: room above for capital accents

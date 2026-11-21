@@ -147,8 +147,8 @@ def density_scale(ch, strokes, bold=False):
     narrower, down to 8% (12% in Bold), so its spaces stay open. Characters of
     7 to 10 strokes keep the pen as it is. Kana and punctuation are left alone."""
     cp = ord(ch)
-    if not (0x3400 <= cp <= 0x9FFF or 0xF900 <= cp <= 0xFAFF):
-        return 1.0
+    if not (0x3400 <= cp <= 0x9FFF or 0xF900 <= cp <= 0xFAFF or 0x20000 <= cp <= 0x3FFFF):
+        return 1.0      # CJK Unified (with Extension A and B onward) and Compatibility only
     n = len(strokes)
     if n <= 6:
         return 1.0 + (0.04 if bold else 0.06) * (1.0 - ease(1, 7, n))

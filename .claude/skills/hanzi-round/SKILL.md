@@ -104,6 +104,11 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   y 40–570. To scale one up, give a rect bigger than the frame:
   甘 `(0, -60, 1000, 2000)`, 弗 `(0, 0, 1000, 1700)`, 幺 `(0, 0, 1000, 1700)`,
   乞 `(-375, 0, 1046, 1000)`.
+- **A shared character takes Taiwan's part.** Where a part has a Taiwan form
+  (`K['瓦T']`, `K['叟T']`, any name in `_TW_PARTS`), a character both scripts
+  write uses that one, and goes in `_SHARED_TW` so Simplified text gets the
+  mainland's. `hz_forms.py` catches a Taiwan part with no ZHS form, not a
+  mainland part used where Taiwan's belongs: look for `K['x']` where `K['xT']` exists.
 - **Nothing starts on the top edge.** A stroke at y < 30, or a part whose rect
   starts at y 0 with ink at its own top, is cut off by Yinni and
   Louhen (懼's 瞿 did this). Start at 30, or the rect at 40–50.

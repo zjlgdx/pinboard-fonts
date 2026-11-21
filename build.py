@@ -1069,6 +1069,20 @@ def features(style, glyphs, pairs, anchors):
         rules += [f"  sub @cycle{v} @cycle0' lookup to_alt{v + 1};" for v in range(style.alternates - 1, 0, -1)]
         rules.append("  sub @cycle0 @cycle0' lookup to_alt1;")
         fea += ['feature calt {'] + rules + ['} calt;']
+    if style.mono and 'hyphen.arrow_r' in glyphs:
+        # Programming ligatures, off unless asked for (`dlig`): -> <- => != <= >=, each
+        # still two cells wide, so a terminal's cursor stays in step. A pair inside a
+        # longer run of these marks (-->, ===, !==, <=>) stays as typed.
+        fea += ['@lig_op = [hyphen greater less equal exclam];', 'feature dlig {']
+        for a, b, first, second in (('hyphen', 'greater', 'hyphen.arrow_r', 'greater.arrow_r'),
+                                    ('less', 'hyphen', 'less.arrow_l', 'hyphen.arrow_l'),
+                                    ('equal', 'greater', 'equal.fat_r', 'greater.fat_r'),
+                                    ('exclam', 'equal', 'exclam.neq', 'equal.neq'),
+                                    ('less', 'equal', 'less.lte', 'equal.lte'),
+                                    ('greater', 'equal', 'greater.gte', 'equal.gte')):
+            fea += [f"  ignore sub @lig_op {a}' {b};", f"  ignore sub {a}' {b} @lig_op;",
+                    f"  sub {a}' {b} by {first};", f"  sub {first} {b}' by {second};"]
+        fea.append('} dlig;')
     if pairs:
         variants = {}
         for name, g in glyphs.items():
@@ -1348,13 +1362,17 @@ def make(style, shared=None, use_cache=None):
         own, stack = style.anchors(ch, v)
         anchors[name] = ({c: font_pt(p) for c, p in own.items()}, {c: font_pt(p) for c, p in stack.items()})
 
-    # Box drawing and blocks, made to the cell (Yinni only).
+    # Box drawing, blocks and the programming ligatures, made to the cell (Yinni only).
     if style.mono:
         light = round(2 * style.radius * K / 2) * 2
         nan = np.full(ROWS.shape, np.nan)
         for ch, rec in cells.glyphs(style.advance, TYPO_ASC, TYPO_DESC, light).items():
             glyphs[glyph_name(ch)] = {'ch': ch, 'rec': rec, 'left': nan, 'right': nan, 'variant': 0,
                                       'adv': style.advance, 'dx': 0, 'cell': True}
+        y_mid = round((BASE - 460) * K) + lift
+        for name, (ch, rec) in cells.ligatures(style.advance, y_mid, light).items():
+            glyphs[name] = {'ch': ch, 'rec': rec, 'left': nan, 'right': nan, 'variant': 1,
+                            'adv': style.advance, 'dx': 0, 'cell': True}
 
     pairs = {}
     if not style.mono:
@@ -1479,7 +1497,8 @@ def autohint(font):
     # Chinese has its own lines, not the Latin's blue zones: leave it unhinted
     # rather than snap its strokes to the x-height and cap height.
     cell += sorted({cmap[cp] for cp in cmap if chr(cp) in hanzi.C})
-    cell += sorted(n for n in font.getGlyphOrder() if '.zhs' in n or n.endswith('.vert'))
+    cell += sorted(n for n in font.getGlyphOrder()
+                   if '.zhs' in n or n.endswith(('.vert', '.arrow_r', '.arrow_l', '.fat_r', '.neq', '.lte', '.gte')))
     with tempfile.TemporaryDirectory() as t:
         src, dst = Path(t) / 'in.otf', Path(t) / 'out.otf'
         font.save(src)

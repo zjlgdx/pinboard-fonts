@@ -54,7 +54,7 @@ The full names are 一粟印泥 Yisu Yinni, 一粟畫沙 Yisu Huasha and 一粟�
 | **Zhuyin** | All 37 symbols of 注音符號, the Ministry's four extra, and the tone marks. |
 | **Latin** | ASCII, Latin-1 and all of Latin Extended-A: Western, Central European, Baltic, Turkish, Maltese, Welsh and Esperanto, and Romanian `Ș Ț`. Combining marks for any letter. |
 | **Symbols** | Currency, math, arrows, check marks. |
-| **Terminal** (Yinni only) | Box drawing and block elements made to the cell, the marks Claude Code prints, and Powerline's separators. |
+| **Terminal** (Yinni only) | Box drawing and block elements made to the cell, the marks Claude Code prints, and Powerline's separators. Programming ligatures `->` `<-` `=>` `!=` `<=` `>=`, still two cells wide, off unless you turn on `dlig` (`font-feature = +dlig` in Ghostty, `"editor.fontLigatures": "'dlig'"` in VS Code). |
 
 Not yet: Greek, Cyrillic, Vietnamese as precomposed letters, and Chinese past the lists above. Text the fonts don't have falls back to another font.
 

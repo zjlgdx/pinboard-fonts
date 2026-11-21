@@ -403,3 +403,80 @@ def clipped(polys, adv, asc, desc):
     rec = RecordingPen()
     BooleanOperationManager.intersection(list(polys), [rect(0, desc, adv, asc)], PointToSegmentPen(rec))
     return oriented(rec)
+
+
+def _strip(p0, p1, half_w):
+    """A rectangle of width 2*half_w along the segment p0 -> p1."""
+    x0, y0 = p0
+    x1, y1 = p1
+    dx, dy = x1 - x0, y1 - y0
+    n = math.hypot(dx, dy)
+    nx, ny = -dy / n * half_w, dx / n * half_w
+    return Poly([(x0 + nx, y0 + ny), (x1 + nx, y1 + ny), (x1 - nx, y1 - ny), (x0 - nx, y0 - ny)])
+
+
+def ligatures(adv, y_mid, light):
+    """Monospace-safe programming ligature halves for Yinni (each strictly one
+    cell wide so terminal/editor cursor alignment never shifts).
+
+    Pairs emitted in feature calt: ->, <-, =>, !=, <=, >=.
+    """
+    t = light / 2
+    gap = round(max(light * 1.45, 95))      # half-spacing between double bars
+    wing = round(max(175, light * 2.4))     # vertical half-span of arrowheads
+    lo, hi = y_mid - wing - light, y_mid + wing + light
+
+    def hbar(x0, x1, y=y_mid):
+        return rect(x0, y - t, x1, y + t)
+
+    def clip_cell(polys):
+        return clipped(polys, adv, hi + 120, lo - 120)
+
+    def mirror(polys):
+        return [Poly([(adv - x, y) for x, y in reversed(p.pts)]) for p in polys]
+
+    # -> (hyphen.arrow_r + greater.arrow_r)
+    arrow_shaft = [hbar(90, adv)]
+    arrow_head = [hbar(0, adv - 95),
+                  _strip((adv - 290, y_mid + wing), (adv - 85, y_mid), t),
+                  _strip((adv - 290, y_mid - wing), (adv - 85, y_mid), t)]
+
+    # => (equal.fat_r + greater.fat_r)
+    fat_shaft = [hbar(80, adv, y_mid + gap * 0.55), hbar(80, adv, y_mid - gap * 0.55)]
+    fat_head = [hbar(0, adv - 165, y_mid + gap * 0.55), hbar(0, adv - 165, y_mid - gap * 0.55),
+                _strip((adv - 285, y_mid + wing + 15), (adv - 80, y_mid), t),
+                _strip((adv - 285, y_mid - wing - 15), (adv - 80, y_mid), t)]
+
+    # != (exclam.neq + equal.neq): double bar across both cells + diagonal slash
+    neq_l = [hbar(140, adv, y_mid + gap * 0.6), hbar(140, adv, y_mid - gap * 0.6),
+             _strip((adv - 155, y_mid - wing - 35), (adv + 155, y_mid + wing + 35), t)]
+    neq_r = [hbar(0, adv - 140, y_mid + gap * 0.6), hbar(0, adv - 140, y_mid - gap * 0.6),
+             _strip((-155, y_mid - wing - 35), (155, y_mid + wing + 35), t)]
+
+    # <= (less.lte + equal.lte) and >= (greater.gte + equal.gte)
+    bar_y = y_mid - wing - 25
+    apex_y = y_mid + 35
+    che_h = wing - 25
+    lte_l = [_strip((adv + 110, apex_y + che_h), (190, apex_y), t),
+             _strip((190, apex_y), (adv + 110, apex_y - che_h), t),
+             hbar(185, adv, bar_y)]
+    lte_r = [_strip((110, apex_y + che_h), (190 - adv, apex_y), t),
+             _strip((190 - adv, apex_y), (110, apex_y - che_h), t),
+             hbar(0, adv - 185, bar_y)]
+    gte_l = mirror(lte_r)
+    gte_r = mirror(lte_l)
+
+    return {
+        'hyphen.arrow_r': ('-', clip_cell(arrow_shaft)),
+        'greater.arrow_r': ('>', clip_cell(arrow_head)),
+        'less.arrow_l': ('<', clip_cell(mirror(arrow_head))),
+        'hyphen.arrow_l': ('-', clip_cell(mirror(arrow_shaft))),
+        'equal.fat_r': ('=', clip_cell(fat_shaft)),
+        'greater.fat_r': ('>', clip_cell(fat_head)),
+        'exclam.neq': ('!', clip_cell(neq_l)),
+        'equal.neq': ('=', clip_cell(neq_r)),
+        'less.lte': ('<', clip_cell(lte_l)),
+        'equal.lte': ('=', clip_cell(lte_r)),
+        'greater.gte': ('>', clip_cell(gte_l)),
+        'equal.gte': ('=', clip_cell(gte_r)),
+    }

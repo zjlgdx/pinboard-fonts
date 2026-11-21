@@ -48,7 +48,8 @@ The full names are 一粟印泥 Yisu Yinni, 一粟畫沙 Yisu Huasha and 一粟�
 
 | | Covered |
 | --- | --- |
-| **Chinese** | So far, every character in the first 5489 rows of [`hanzi_order.tsv`](hanzi_order.tsv): 6929 in all, Simplified and Traditional, with 26 more for the texts on the website. All of Taiwan's 4,808 common characters, the 3,500 of mainland China's first level and the 5,401 of Big5's first level, and the 3,755 of GB 2312's first level. Each in its own standard's form: Taiwan's 說, the mainland's 说. |
+| **Chinese** | So far, every character in the first 5489 rows of [`hanzi_order.tsv`](hanzi_order.tsv): 6929 in all, Simplified and Traditional, with 26 more for the texts on the website and 31 common Hong Kong Cantonese characters (`嘅 喺 啲 咗 佢 冇 嘢 咁 諗 搵 攞 畀 …`). All of Taiwan's 4,808 common characters, the 3,500 of mainland China's first level and the 5,401 of Big5's first level, and the 3,755 of GB 2312's first level. Each in its own standard's form: Taiwan's 說, the mainland's 说. |
+| **Kana** | All 182 Hiragana and Katakana: voiced and semi-voiced, small kana, the prolonged sound mark `ー` and the iteration marks. In a column `ー` stands upright and the small kana move up and to the right. |
 | **Punctuation** | Full-width `。，、；：？！「」『』（）《》〈〉・`, set as Taiwan sets it, or as the mainland does in text tagged Simplified Chinese; forms for vertical text. |
 | **Zhuyin** | All 37 symbols of 注音符號, the Ministry's four extra, and the tone marks. |
 | **Latin** | ASCII, Latin-1 and all of Latin Extended-A: Western, Central European, Baltic, Turkish, Maltese, Welsh and Esperanto, and Romanian `Ș Ț`. Combining marks for any letter. |

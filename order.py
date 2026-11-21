@@ -41,6 +41,12 @@ Last, sorted the same way, the rest of GB 2312's first level (kGB0 rows
 16-55, 3,755 characters), with their Traditional forms as above: chemistry
 and place names (胺 醛 邯) that the corpus and 通用规范汉字表's first level
 leave out, but Simplified text still uses.
+
+Then the rest of 通用规范汉字表's second level (kTGH index 3501-6500, 3,000
+characters: names, places, science and the literary words a general reader
+meets), sorted the same way. Their Traditional forms are rarer, so here a
+form counts as Taiwan's when it is in either of CNS 11643's first two planes
+(kIRG_TSource T1 or T2, together what Big5 holds).
 """
 import re
 import sys
@@ -150,6 +156,17 @@ def main(folder, moe_path=Path(__file__).with_name('moe_4808.tsv')):
         gb.append((ch, 0, forms_of(ch)))
         seen |= {ch, *forms_of(ch)}
     rows += gb
+
+    # Then the rest of 通用规范汉字表's second level, with Taiwan's forms from CNS planes 1 and 2.
+    planes = {ch for ch, v in fields(folder, 'Unihan_IRGSources.txt', 'kIRG_TSource').items() if v[:3] in ('T1-', 'T2-')}
+    level_2 = {ch for ch, v in tgh.items() if any(3500 < int(i) <= 6500 for i in re.findall(r'2013:(\d+)', v))}
+    assert len(level_2) == 3000, len(level_2)
+    second = []
+    for ch in sorted(level_2 - seen, key=lambda c: (radical_strokes(rs[c]), ord(c))):
+        forms = [t for t in chars(trad.get(ch, '')) if t in planes] or [ch]
+        second.append((ch, 0, forms))
+        seen |= {ch, *forms}
+    rows += second
     head = (Path(folder) / 'Unihan_Readings.txt').read_text(encoding='utf-8').splitlines()[:6]
     version = next(line[2:] for line in head if line.startswith('# Unicode Version'))
     print(f'# Chinese characters by frequency, from the Unicode Han Database (Unihan), {version}.')
@@ -157,6 +174,7 @@ def main(folder, moe_path=Path(__file__).with_name('moe_4808.tsv')):
     print('# then, with count 0, the rest of level 1 and of moe_4808.tsv, by kRSUnicode;')
     print("# then the rest of Big5's first level (kBigFive A440-C67E), by kRSUnicode, with kTGH Simplified forms;")
     print("# then the rest of GB 2312's first level (kGB0 rows 16-55), by kRSUnicode, with Taiwan's forms.")
+    print("# then the rest of 通用规范汉字表's second level (kTGH 3501-6500), by kRSUnicode, with kIRG_TSource T1 and T2 forms.")
     print('# Unihan: Copyright © 1991-2026 Unicode, Inc. Unicode License v3, https://www.unicode.org/license.txt')
     print('# rank\tcount\tsimplified\ttraditional\ttgh-level-1')
     def index(ch):

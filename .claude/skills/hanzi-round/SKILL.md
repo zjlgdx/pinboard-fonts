@@ -229,7 +229,9 @@ sorted by radical so a round draws whole families. Rows 4,824–5,364 are the
 rest of Big5's first level (5,401, Unihan `kBigFive` A440–C67E), sorted the
 same way, with the mainland's form where 通用规范汉字表 has it at any level.
 Draw their Traditional forms as Taiwan's 次常用國字標準字體表 writes them. A `-`
-in a column means that script has nothing to draw on that row.
+in a column means that script has nothing to draw on that row. Rows 5,490–7,183 are the rest of
+通用规范汉字表's second level (kTGH 3501–6500), with Traditional forms from
+CNS planes 1 and 2.
 `merge_round.py` keeps the README's "Drawn so far" line for the three lists. Any new list needs its source
 and licence checked and recorded in the README first.
 

@@ -109,6 +109,11 @@ clears. `work/unihan/` keeps the Unihan files `order.py` reads.
   write uses that one, and goes in `_SHARED_TW` so Simplified text gets the
   mainland's. `hz_forms.py` catches a Taiwan part with no ZHS form, not a
   mainland part used where Taiwan's belongs: look for `K['x']` where `K['xT']` exists.
+- **The radical is not always on the left.** 媭 is 须 over 女, not 女 beside 须;
+  a batch written a family at a time makes this easy to miss. Say each
+  character's structure to yourself before `lr()`, and run `tools/hz_count.py
+  --batch ...` on the batch: a part sliced short (彘's 彑 without its foot)
+  shows as a count one off.
 - **Nothing starts on the top edge.** A stroke at y < 30, or a part whose rect
   starts at y 0 with ink at its own top, is cut off by Yinni and
   Louhen (懼's 瞿 did this). Start at 30, or the rect at 40–50.
